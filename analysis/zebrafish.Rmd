@@ -1,0 +1,64 @@
+---
+title: "Zebrafish summary"
+author: "Karissa"
+date: "06/06/2020"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# setup
+
+```{r}
+library(UpSetR)
+library(RColorBrewer)
+library(tidyverse)
+library(magrittr)
+library(pheatmap)
+```
+
+# Read in the HMP values from each study
+```{r}
+HMP_q96_6m <- readRDS("data/zebrafish/R_objects/psen1Q96_HMP.rds") %>% 
+  mutate(mutation = "Q96_K97del/+", 
+         gene = "psen1") %>% 
+  dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
+
+
+sorl1_2way_HMP <- readRDS("data/zebrafish/R_objects/sorl1_2way_HMP.rds") %>% 
+  mutate(mutation = "W1818*/+", 
+         gene = "sorl1") %>% 
+  dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
+
+sorl14way_HMP <- readRDS("data/zebrafish/R_objects/sorl14way_HMP.rds") %>% 
+  mutate(mutation = case_when(coef == "R122Pfs/+" ~ "null/+", 
+                              TRUE ~ coef ), 
+         gene = "sorl1") %>% 
+  dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
+
+
+psen2_HMP <- readRDS("data/zebrafish/R_objects/psen2_HMP.rds") %>% 
+  mutate(mutation = case_when(coef == "FAD" ~ "T141_L142delinsMISLISV/+", 
+                              coef == "FS" ~ "null/+"
+                            ), 
+         gene = "psen2") %>% 
+  dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
+
+psen1_T428del_HMP <- readRDS("data/zebrafish/R_objects/HMP_raw_KEGG_IRE.rds") %>% 
+  mutate(mutation = case_when(coef == "fAI-like/+" ~ "W233fs/+", 
+                              coef == "EOfAD-like/+" ~ "T428del/+"
+  ), 
+  gene = "psen1") %>% 
+  dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
+```
+
+
+
+

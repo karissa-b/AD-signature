@@ -1,0 +1,2813 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+
+<meta name="author" content="Karissa" />
+
+<meta name="date" content="2020-06-06" />
+
+<title>APOE Neuron paper analysis 3m only</title>
+
+<script src="site_libs/jquery-1.11.3/jquery.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="site_libs/bootstrap-3.3.5/css/cosmo.min.css" rel="stylesheet" />
+<script src="site_libs/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/html5shiv.min.js"></script>
+<script src="site_libs/bootstrap-3.3.5/shim/respond.min.js"></script>
+<script src="site_libs/jqueryui-1.11.4/jquery-ui.min.js"></script>
+<link href="site_libs/tocify-1.9.1/jquery.tocify.css" rel="stylesheet" />
+<script src="site_libs/tocify-1.9.1/jquery.tocify.js"></script>
+<script src="site_libs/navigation-1.1/tabsets.js"></script>
+<link href="site_libs/highlightjs-9.12.0/textmate.css" rel="stylesheet" />
+<script src="site_libs/highlightjs-9.12.0/highlight.js"></script>
+<link href="site_libs/anchor-sections-1.0/anchor-sections.css" rel="stylesheet" />
+<script src="site_libs/anchor-sections-1.0/anchor-sections.js"></script>
+<script src="site_libs/kePrint-0.0.1/kePrint.js"></script>
+<link href="site_libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
+
+<link rel="icon" href="https://github.com/workflowr/workflowr-assets/raw/master/img/reproducible.png">
+<!-- Add a small amount of space between sections. -->
+<style type="text/css">
+div.section {
+  padding-top: 12px;
+}
+</style>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css">
+  pre:not([class]) {
+    background-color: white;
+  }
+</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+<style type="text/css">
+h1 {
+  font-size: 34px;
+}
+h1.title {
+  font-size: 38px;
+}
+h2 {
+  font-size: 30px;
+}
+h3 {
+  font-size: 24px;
+}
+h4 {
+  font-size: 18px;
+}
+h5 {
+  font-size: 16px;
+}
+h6 {
+  font-size: 12px;
+}
+.table th:not([align]) {
+  text-align: left;
+}
+</style>
+
+
+
+
+<style type = "text/css">
+.main-container {
+  max-width: 940px;
+  margin-left: auto;
+  margin-right: auto;
+}
+code {
+  color: inherit;
+  background-color: rgba(0, 0, 0, 0.04);
+}
+img {
+  max-width:100%;
+}
+.tabbed-pane {
+  padding-top: 12px;
+}
+.html-widget {
+  margin-bottom: 20px;
+}
+button.code-folding-btn:focus {
+  outline: none;
+}
+summary {
+  display: list-item;
+}
+</style>
+
+
+<style type="text/css">
+/* padding for bootstrap navbar */
+body {
+  padding-top: 51px;
+  padding-bottom: 40px;
+}
+/* offset scroll position for anchor links (for fixed navbar)  */
+.section h1 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h2 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h3 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h4 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h5 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.section h6 {
+  padding-top: 56px;
+  margin-top: -56px;
+}
+.dropdown-submenu {
+  position: relative;
+}
+.dropdown-submenu>.dropdown-menu {
+  top: 0;
+  left: 100%;
+  margin-top: -6px;
+  margin-left: -1px;
+  border-radius: 0 6px 6px 6px;
+}
+.dropdown-submenu:hover>.dropdown-menu {
+  display: block;
+}
+.dropdown-submenu>a:after {
+  display: block;
+  content: " ";
+  float: right;
+  width: 0;
+  height: 0;
+  border-color: transparent;
+  border-style: solid;
+  border-width: 5px 0 5px 5px;
+  border-left-color: #cccccc;
+  margin-top: 5px;
+  margin-right: -10px;
+}
+.dropdown-submenu:hover>a:after {
+  border-left-color: #ffffff;
+}
+.dropdown-submenu.pull-left {
+  float: none;
+}
+.dropdown-submenu.pull-left>.dropdown-menu {
+  left: -100%;
+  margin-left: 10px;
+  border-radius: 6px 0 6px 6px;
+}
+</style>
+
+<script>
+// manage active state of menu based on current page
+$(document).ready(function () {
+  // active menu anchor
+  href = window.location.pathname
+  href = href.substr(href.lastIndexOf('/') + 1)
+  if (href === "")
+    href = "index.html";
+  var menuAnchor = $('a[href="' + href + '"]');
+
+  // mark it active
+  menuAnchor.parent().addClass('active');
+
+  // if it's got a parent navbar menu mark it active as well
+  menuAnchor.closest('li.dropdown').addClass('active');
+});
+</script>
+
+<!-- tabsets -->
+
+<style type="text/css">
+.tabset-dropdown > .nav-tabs {
+  display: inline-table;
+  max-height: 500px;
+  min-height: 44px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.tabset-dropdown > .nav-tabs > li.active:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li.active:before {
+  content: "&#xe258;";
+  border: none;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open:before {
+  content: "";
+  font-family: 'Glyphicons Halflings';
+  display: inline-block;
+  padding: 10px;
+  border-right: 1px solid #ddd;
+}
+
+.tabset-dropdown > .nav-tabs > li.active {
+  display: block;
+}
+
+.tabset-dropdown > .nav-tabs > li > a,
+.tabset-dropdown > .nav-tabs > li > a:focus,
+.tabset-dropdown > .nav-tabs > li > a:hover {
+  border: none;
+  display: inline-block;
+  border-radius: 4px;
+  background-color: transparent;
+}
+
+.tabset-dropdown > .nav-tabs.nav-tabs-open > li {
+  display: block;
+  float: none;
+}
+
+.tabset-dropdown > .nav-tabs > li {
+  display: none;
+}
+</style>
+
+<!-- code folding -->
+
+
+
+<style type="text/css">
+
+#TOC {
+  margin: 25px 0px 20px 0px;
+}
+@media (max-width: 768px) {
+#TOC {
+  position: relative;
+  width: 100%;
+}
+}
+
+@media print {
+.toc-content {
+  /* see https://github.com/w3c/csswg-drafts/issues/4434 */
+  float: right;
+}
+}
+
+.toc-content {
+  padding-left: 30px;
+  padding-right: 40px;
+}
+
+div.main-container {
+  max-width: 1200px;
+}
+
+div.tocify {
+  width: 20%;
+  max-width: 260px;
+  max-height: 85%;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  div.tocify {
+    width: 25%;
+  }
+}
+
+@media (max-width: 767px) {
+  div.tocify {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.tocify ul, .tocify li {
+  line-height: 20px;
+}
+
+.tocify-subheader .tocify-item {
+  font-size: 0.90em;
+}
+
+.tocify .list-group-item {
+  border-radius: 0px;
+}
+
+
+</style>
+
+
+
+</head>
+
+<body>
+
+
+<div class="container-fluid main-container">
+
+
+<!-- setup 3col/9col grid for toc_float and main content  -->
+<div class="row-fluid">
+<div class="col-xs-12 col-sm-4 col-md-3">
+<div id="TOC" class="tocify">
+</div>
+</div>
+
+<div class="toc-content col-xs-12 col-sm-8 col-md-9">
+
+
+
+
+<div class="navbar navbar-default  navbar-fixed-top" role="navigation">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="index.html">AD-signature</a>
+    </div>
+    <div id="navbar" class="navbar-collapse collapse">
+      <ul class="nav navbar-nav">
+        <li>
+  <a href="index.html">Home</a>
+</li>
+<li>
+  <a href="about.html">About</a>
+</li>
+<li>
+  <a href="license.html">License</a>
+</li>
+      </ul>
+      <ul class="nav navbar-nav navbar-right">
+        
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div><!--/.container -->
+</div><!--/.navbar -->
+
+<div class="fluid-row" id="header">
+
+
+
+<h1 class="title toc-ignore">APOE Neuron paper analysis 3m only</h1>
+<h4 class="author">Karissa</h4>
+<h4 class="date">06/06/2020</h4>
+
+</div>
+
+
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-report" data-toggle="collapse" data-target="#workflowr-report">
+<span class="glyphicon glyphicon-list" aria-hidden="true"></span> workflowr <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+</button>
+</p>
+<div id="workflowr-report" class="collapse">
+<ul class="nav nav-tabs">
+<li class="active">
+<a data-toggle="tab" href="#summary">Summary</a>
+</li>
+<li>
+<a data-toggle="tab" href="#checks"> Checks <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> </a>
+</li>
+<li>
+<a data-toggle="tab" href="#versions">Past versions</a>
+</li>
+</ul>
+<div class="tab-content">
+<div id="summary" class="tab-pane fade in active">
+<p>
+<strong>Last updated:</strong> 2021-02-12
+</p>
+<p>
+<strong>Checks:</strong> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> 7 <span class="glyphicon glyphicon-exclamation-sign text-danger" aria-hidden="true"></span> 0
+</p>
+<p>
+<strong>Knit directory:</strong> <code>AD-signature/</code> <span class="glyphicon glyphicon-question-sign" aria-hidden="true" title="This is the local directory in which the code in this file was executed."> </span>
+</p>
+<p>
+This reproducible <a href="http://rmarkdown.rstudio.com">R Markdown</a> analysis was created with <a
+  href="https://github.com/jdblischak/workflowr">workflowr</a> (version 1.6.2). The <em>Checks</em> tab describes the reproducibility checks that were applied when the results were created. The <em>Past versions</em> tab lists the development history.
+</p>
+<hr>
+</div>
+<div id="checks" class="tab-pane fade">
+<div id="workflowr-checks" class="panel-group">
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRMarkdownfilestronguptodate"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>R Markdown file:</strong> up-to-date </a>
+</p>
+</div>
+<div id="strongRMarkdownfilestronguptodate" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great! Since the R Markdown file has been committed to the Git repository, you know the exact version of the code that produced these results.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongEnvironmentstrongempty"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Environment:</strong> empty </a>
+</p>
+</div>
+<div id="strongEnvironmentstrongempty" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! The global environment was empty. Objects defined in the global environment can affect the analysis in your R Markdown file in unknown ways. For reproduciblity it’s best to always run the code in an empty environment.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSeedstrongcodesetseed20210212code"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Seed:</strong> <code>set.seed(20210212)</code> </a>
+</p>
+</div>
+<div id="strongSeedstrongcodesetseed20210212code" class="panel-collapse collapse">
+<div class="panel-body">
+<p>The command <code>set.seed(20210212)</code> was run prior to running the code in the R Markdown file. Setting a seed ensures that any results that rely on randomness, e.g. subsampling or permutations, are reproducible.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongSessioninformationstrongrecorded"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Session information:</strong> recorded </a>
+</p>
+</div>
+<div id="strongSessioninformationstrongrecorded" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Recording the operating system, R version, and package versions is critical for reproducibility.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongCachestrongnone"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Cache:</strong> none </a>
+</p>
+</div>
+<div id="strongCachestrongnone" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Nice! There were no cached chunks for this analysis, so you can be confident that you successfully produced the results during this run.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongFilepathsstrongrelative"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>File paths:</strong> relative </a>
+</p>
+</div>
+<div id="strongFilepathsstrongrelative" class="panel-collapse collapse">
+<div class="panel-body">
+<p>Great job! Using relative paths to the files within your workflowr project makes it easier to run your code on other machines.</p>
+</div>
+</div>
+</div>
+<div class="panel panel-default">
+<div class="panel-heading">
+<p class="panel-title">
+<a data-toggle="collapse" data-parent="#workflowr-checks" href="#strongRepositoryversionstrongahrefhttpsgithubcomkarissabADsignaturetreec07d0dced29094925812b2bcf591fbdafe9acdf2targetblankc07d0dca"> <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span> <strong>Repository version:</strong> <a href="https://github.com/karissa-b/AD-signature/tree/c07d0dced29094925812b2bcf591fbdafe9acdf2" target="_blank">c07d0dc</a> </a>
+</p>
+</div>
+<div id="strongRepositoryversionstrongahrefhttpsgithubcomkarissabADsignaturetreec07d0dced29094925812b2bcf591fbdafe9acdf2targetblankc07d0dca" class="panel-collapse collapse">
+<div class="panel-body">
+<p>
+Great! You are using Git for version control. Tracking code development and connecting the code version to the results is critical for reproducibility.
+</p>
+<p>
+The results in this page were generated with repository version <a href="https://github.com/karissa-b/AD-signature/tree/c07d0dced29094925812b2bcf591fbdafe9acdf2" target="_blank">c07d0dc</a>. See the <em>Past versions</em> tab to see a history of the changes made to the R Markdown and HTML files.
+</p>
+<p>
+Note that you need to be careful to ensure that all relevant files for the analysis have been committed to Git prior to generating the results (you can use <code>wflow_publish</code> or <code>wflow_git_commit</code>). workflowr only checks the R Markdown file, but you know if there are other scripts or data files that it depends on. Below is the status of the Git repository when the results were generated:
+</p>
+<pre><code>
+Ignored files:
+    Ignored:    .Rproj.user/
+
+Untracked files:
+    Untracked:  .DS_Store
+    Untracked:  .Rprofile
+    Untracked:  .gitattributes
+    Untracked:  .gitignore
+    Untracked:  _workflowr.yml
+    Untracked:  analysis/_site.yml
+    Untracked:  analysis/about.Rmd
+    Untracked:  analysis/index.Rmd
+    Untracked:  analysis/license.Rmd
+    Untracked:  code/
+    Untracked:  data/AppNL-G-F.microarray/MoGene-2_0-st-v1.na36.mm10.transcript.csv
+    Untracked:  data/README.md
+    Untracked:  data/zebrafish/
+    Untracked:  output/
+
+Unstaged changes:
+    Modified:   APOE-TR 12m.Rmd
+
+</code></pre>
+<p>
+Note that any generated files, e.g. HTML, png, CSS, etc., are not included in this status report because it is ok for generated content to have uncommitted changes.
+</p>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</div>
+<div id="versions" class="tab-pane fade">
+
+<p>
+These are the previous versions of the repository in which changes were made to the R Markdown (<code>analysis/APOE-TR_3m_12m.Rmd</code>) and HTML (<code>docs/APOE-TR_3m_12m.html</code>) files. If you’ve configured a remote Git repository (see <code>?wflow_git_remote</code>), click on the hyperlinks in the table below to view the files as they were in that past version.
+</p>
+<div class="table-responsive">
+<table class="table table-condensed table-hover">
+<thead>
+<tr>
+<th>
+File
+</th>
+<th>
+Version
+</th>
+<th>
+Author
+</th>
+<th>
+Date
+</th>
+<th>
+Message
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Rmd
+</td>
+<td>
+<a href="https://github.com/karissa-b/AD-signature/blob/c07d0dced29094925812b2bcf591fbdafe9acdf2/analysis/APOE-TR_3m_12m.Rmd" target="_blank">c07d0dc</a>
+</td>
+<td>
+karissa
+</td>
+<td>
+2021-02-12
+</td>
+<td>
+APOE-tr additions
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+</div>
+</div>
+</div>
+<div id="setup" class="section level4">
+<h4>setup</h4>
+<pre class="r"><code>library(tidyverse)
+library(magrittr)
+library(limma)
+library(edgeR)
+library(fgsea)
+library(ggfortify)
+library(ggrepel)
+library(goseq)
+library(cqn)
+library(scales)
+library(harmonicmeanp)
+library(readxl)
+library(gridExtra)
+library(grid)
+library(AnnotationHub)
+library(ensembldb)
+library(msigdbr)
+
+# Visualisation
+library(ggpubr)
+library(pheatmap)
+library(UpSetR)
+library(kableExtra)
+library(pander)
+library(rtracklayer)
+library(RColorBrewer)
+library(cowplot)
+library(ggeasy)
+library(pathview)
+library(ggsci)
+
+# We will use a function by Ben Marwick for raincloud plots
+# This code loads the function in the working environment
+source(&quot;https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R&quot;)</code></pre>
+</div>
+<div id="annotations" class="section level2">
+<h2>annotations</h2>
+<pre class="r"><code>ah &lt;- AnnotationHub() %&gt;%
+    subset(species == &quot;Mus musculus&quot;) %&gt;%
+    subset(rdataclass == &quot;EnsDb&quot;)
+
+ens98 &lt;- ah[[&quot;AH75036&quot;]] # for release 98
+ex &lt;- exonsBy(ens98, &quot;tx&quot;)
+tr &lt;- transcripts(ens98)
+gn &lt;- genes(ens98)
+
+# get the lengths of transcripts from the ensdb object
+tr$len &lt;- ex %&gt;%
+    width %&gt;%
+    lapply(sum) %&gt;%
+    .[names(tr)] %&gt;%
+    unlist()
+
+# also get the mean GC (weighted by transcript length) and the mean length of alternate transcripts per gene. 
+gc_len &lt;- mcols(tr) %&gt;%
+    as.data.frame() %&gt;%
+    group_by(gene_id) %&gt;%
+    summarise(
+        n = n(),
+        meanGC = sum(len*gc_content) / sum(len),
+        len = mean(len)
+    ) %&gt;% 
+  left_join(gn %&gt;% as.data.frame() %&gt;% dplyr::select(gene_id, gene_name, gene_biotype, description, seqnames, entrezid)) %&gt;% 
+  column_to_rownames(&quot;gene_id&quot;)</code></pre>
+</div>
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<!-- ### summary of feature counts.  -->
+<!-- ```{r summ_featureCounts} -->
+<!-- read_tsv("data/APOE-TR/04_featurecounts_zhaoetal/featureCounts_q10_ensRelease98.txt.summary") %>% -->
+<!--   dplyr::slice(1:4) %>%  -->
+<!--   column_to_rownames("Status") %>%  -->
+<!--   t() %>%  -->
+<!--   as.data.frame() %>%  -->
+<!--   rownames_to_column("sample") %>%  -->
+<!--   mutate(Assigned = as.double(Assigned),  -->
+<!--          Unassigned_Ambiguity = as.double(Unassigned_Ambiguity),  -->
+<!--          Unassigned_MultiMapping = as.double(Unassigned_MultiMapping),  -->
+<!--          Unassigned_NoFeatures = as.double(Unassigned_NoFeatures)) %>%  -->
+<!--   mutate( -->
+<!--     total = Assigned + Unassigned_Ambiguity + Unassigned_MultiMapping + Unassigned_NoFeatures,  -->
+<!--     percent_assigned = Assigned*100/total,  -->
+<!--     percent_ambiguity = Unassigned_Ambiguity*100/total,  -->
+<!--     percent_multimapping = Unassigned_MultiMapping*100/total,  -->
+<!--     percent_noFeatures = Unassigned_NoFeatures*100/total -->
+<!--     ) %>%  -->
+<!--   dplyr::select(sample, percent_assigned, percent_ambiguity, percent_multimapping, percent_noFeatures) %>%  -->
+<!--   column_to_rownames("sample") %>%  -->
+<!--   signif(2) %>%  -->
+<!--   kable(caption = "summary of featureCounts. with mapping quality > 10, in paired end mode with no fracoverlap term ") %>%  -->
+<!--   kable_styling("basic") -->
+<!-- ``` -->
+<pre class="r"><code>counts_zhaeoetal &lt;- read_tsv(&quot;data/APOE-TR/04_featurecounts_zhaoetal/featureCounts_q10_ensRelease98.txt&quot;, skip = 1) %&gt;% 
+  dplyr::select(-c(Chr, Start, End, Strand, Length)) %&gt;% 
+  column_to_rownames(&quot;Geneid&quot;)
+
+# tidy up column names
+colnames(counts_zhaeoetal) %&lt;&gt;% 
+  str_remove(pattern = &quot;Aligned.sortedByCoord.out.bam&quot;) %&gt;% 
+  str_remove(pattern = &quot;^[:alnum:]+_&quot;) %&gt;% 
+  str_remove(pattern = &quot;.FCH[:alnum:]+_[:alnum:]+_[:alnum:]+&quot;)</code></pre>
+<div id="get-the-metadata-about-the-mice" class="section level2">
+<h2>get the metadata about the mice</h2>
+<p>This information was obtained from synapse. The metadata about the mice is over 2 spreadsheets. So i need to join them together.</p>
+<pre class="r"><code>meta_zhaoetal &lt;- read_csv(&quot;data/APOE-TR/APOE-TR_biospecimen_metadata.csv&quot;) %&gt;% 
+  dplyr::filter(specimenID %in% colnames(counts_zhaeoetal)) %&gt;% 
+  dplyr::select(individualID, specimenID) %&gt;% 
+  left_join(
+    read_csv(&quot;data/APOE-TR/APOE-TR _mouse_metadata.csv&quot;)
+  ) %&gt;% 
+  mutate(
+    Genotype = factor(genotype, levels = c(&quot;APOE3&quot;, &quot;APOE2&quot;, &quot;APOE4&quot;)), 
+    Sex = factor(sex), 
+    Age = case_when(
+     specimenID = grepl(specimenID, pattern = &quot;3M&quot;) ~ &quot;3M&quot;,
+     individualID = grepl(individualID, pattern = &quot;12M&quot;) ~ &quot;12M&quot;, 
+     individualID = grepl(individualID, pattern = &quot;24M&quot;) ~ &quot;24M&quot;
+    ), 
+    sample = specimenID
+  ) %&gt;%
+  mutate(Age = factor(Age, levels = c(&quot;3M&quot;, &quot;12M&quot;, &quot;24M&quot;))) %&gt;%
+  mutate(
+    group = paste0(Genotype, &quot;_&quot;, Age, &quot;_&quot;, Sex) %&gt;% as.factor(), 
+    group_agebyGenotype = paste0(Genotype, &quot;_&quot;, Age) %&gt;% as.factor(), 
+    litter = str_replace_all(dateBirth, pattern = &quot;/&quot;, replacement = &quot;.&quot;)
+    ) %&gt;% 
+  dplyr::select(-age, - genotype, - sex) %&gt;% 
+  column_to_rownames(&quot;specimenID&quot;)
+
+# extract the seq lane info from colnaqmes of featurecounts matrix and add to metadata
+lanes &lt;- read_tsv(&quot;data/APOE-TR/04_featurecounts_zhaoetal/featureCounts_q10_ensRelease98.txt&quot;, 
+         skip = 1) %&gt;% 
+  colnames() %&gt;% 
+  as_tibble() %&gt;% 
+  dplyr::slice(-(1:6)) %&gt;% 
+  set_colnames(&quot;sample&quot;) %&gt;% 
+  mutate(lane = str_extract(sample, pattern =&quot;L\\d&quot;), 
+         sample = str_remove(sample, pattern = &quot;Aligned.sortedByCoord.out.bam&quot;), 
+         sample = str_remove(sample, pattern = &quot;^[:alnum:]+_&quot;), 
+         sample = str_remove(sample, pattern = &quot;\\.FCH.+&quot;)
+  )
+
+meta_zhaoetal %&lt;&gt;% 
+  left_join(lanes)</code></pre>
+</div>
+</div>
+<div id="check-sex-by-expression-of-genes-on-sex-chromosomes" class="section level1">
+<h1>check sex by expression of genes on sex chromosomes</h1>
+<p>In mice, only males contain the Y chromosome. Therefore, this allows me to confirm the sex of the samples by examining whether genes on the Y chromosome are expressed in the brains. Here, I will extract the genes from the Y chromosome which were detected in the RNA-seq experiment, and determine whether they are only expressed in males. Note that only 4 genes were detected.</p>
+<pre class="r"><code>yGenes &lt;- 
+  gc_len %&gt;% 
+  as.data.frame() %&gt;% 
+  rownames_to_column(&quot;gene_id&quot;) %&gt;%
+  dplyr::filter(seqnames == &quot;Y&quot;) %&gt;% 
+  .$gene_id
+
+beforecorrect_sex &lt;- 
+  counts_zhaeoetal %&gt;% 
+  as.data.frame() %&gt;% 
+  .[yGenes,] %&gt;% 
+   .[rowSums(cpm(.) &gt;= 1) &gt;= 47,] %&gt;% 
+  rownames_to_column(&quot;gene_id&quot;) %&gt;% 
+  gather(key = &quot;sample&quot;, value = &quot;counts&quot;, starts_with(&quot;A&quot;)) %&gt;% 
+  left_join(meta_zhaoetal) %&gt;% 
+  dplyr::filter(Age == &quot;3M&quot;) %&gt;% 
+    left_join(gc_len %&gt;% 
+                as.data.frame() %&gt;% 
+                rownames_to_column(&quot;gene_id&quot;) %&gt;%  
+                dplyr::select(gene_id, gene_name)) %&gt;% 
+    dplyr::select(gene_name, sample, Sex, counts) %&gt;% 
+    ggplot(aes(x = sample, y = counts, fill = Sex)) +
+    geom_boxplot(outlier.shape = NA, alpha = 0.8) +
+    facet_wrap(~Sex, ncol = 1, scales = &quot;free&quot;) +
+  theme_bw() +
+  easy_rotate_x_labels(angle = 315) +
+  theme(legend.position = &quot;none&quot;)
+
+beforecorrect_sex</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-3-1.png" alt="Distribution of counts assigned to genes on the Y chromosom" width="672" />
+<p class="caption">
+Distribution of counts assigned to genes on the Y chromosom
+</p>
+</div>
+<p>Sample <code>APOE_3M_21</code> appears to be a male sample, and samples <code>APOE_3M_30</code> and <code>APOE_3M_7</code> appear to be female. Therefore, I will update the meta object to reflect this, Now all samples appeaar correct.</p>
+<pre class="r"><code>meta_zhaoetal %&lt;&gt;% 
+  mutate(Sex = as.character(Sex), 
+         Sex = case_when(
+    sample == &quot;APOE_3M_21&quot;  ~ &quot;male&quot;, 
+    sample == &quot;APOE_3M_30&quot; ~ &quot;female&quot;, 
+    sample == &quot;APOE_3M_7&quot; ~ &quot;female&quot;, 
+    TRUE ~ Sex
+  ), 
+  Sex = as.factor(Sex)) 
+
+
+# Then fix the group factor in the metadata spreadhset
+
+meta_zhaoetal %&lt;&gt;% 
+  as.data.frame() %&gt;% 
+  rownames_to_column(&quot;Sample&quot;) %&gt;% 
+   mutate(
+    group = paste0(Genotype, &quot;_&quot;, Age, &quot;_&quot;, Sex) %&gt;% as.factor(), 
+    group_agebyGenotype = paste0(Genotype, &quot;_&quot;, Age) %&gt;% as.factor()
+    ) %&gt;% 
+  column_to_rownames(&quot;Sample&quot;)
+
+ggarrange(beforecorrect_sex,
+          counts_zhaeoetal %&gt;% 
+            as.data.frame() %&gt;% 
+            .[yGenes,] %&gt;% 
+            .[rowSums(cpm(.) &gt;= 1) &gt;= 47,] %&gt;% 
+            rownames_to_column(&quot;gene_id&quot;) %&gt;% 
+            gather(key = &quot;sample&quot;, value = &quot;counts&quot;, starts_with(&quot;A&quot;)) %&gt;% 
+            left_join(meta_zhaoetal) %&gt;% 
+            dplyr::filter(Age == &quot;3M&quot;) %&gt;% 
+            left_join(gc_len %&gt;% 
+                        as.data.frame() %&gt;% 
+                        rownames_to_column(&quot;gene_id&quot;) %&gt;%  
+                        dplyr::select(gene_id, gene_name)) %&gt;% 
+            dplyr::select(gene_name, sample, Sex, counts) %&gt;% 
+            ggplot(aes(x = sample, y = counts, fill = Sex)) +
+            geom_boxplot(outlier.shape = NA, alpha = 0.8) +
+            facet_wrap(~Sex, ncol = 1, scales = &quot;free&quot;) +
+            theme_bw() +
+            easy_rotate_x_labels(angle = 315) +
+            theme(legend.position = &quot;none&quot;), 
+          labels = &quot;AUTO&quot;, 
+          ncol = 1
+) </code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-4-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>  #ggsave(&quot;plotsforpub/checksex.png&quot;, width = 18, height = 10, units = &quot;cm&quot;, dpi = 800, scale = 1.5)</code></pre>
+</div>
+<div id="filter-lowly-expressed-genes-and-make-dge" class="section level1">
+<h1>filter lowly expressed genes and make DGE</h1>
+<p>Only the 3m samples are retained.</p>
+<pre class="r"><code>x_zhaoetal&lt;-
+  counts_zhaeoetal %&gt;% 
+  dplyr::select(meta_zhaoetal %&gt;% 
+                  dplyr::filter(Age == &quot;3M&quot;) %&gt;% 
+                  .$sample) %&gt;% 
+  .[rowSums(cpm(.) &gt;= 2) &gt;= 8,] %&gt;% 
+  DGEList(
+    samples = tibble(sample = colnames(.)) %&gt;%
+      left_join(meta_zhaoetal), 
+    genes = gc_len[rownames(.),]
+  ) %&gt;% 
+  calcNormFactors(&quot;TMM&quot;) %&gt;% 
+  estimateDisp()</code></pre>
+<pre><code>Design matrix not provided. Switch to the classic mode.</code></pre>
+<pre class="r"><code>a &lt;- 
+  cpm(counts_zhaeoetal, log = TRUE) %&gt;%
+  as.data.frame() %&gt;%
+  pivot_longer(
+    cols = everything(),
+    names_to = &quot;sample&quot;,
+    values_to = &quot;logCPM&quot;
+  ) %&gt;% 
+    split(f = .$sample) %&gt;%
+  lapply(function(y){
+    d &lt;- density(y$logCPM)
+    tibble(
+      sample = unique(y$sample),
+      x = d$x,
+      y = d$y
+    )
+  }) %&gt;%
+  bind_rows() %&gt;%
+  left_join(x_zhaoetal$samples) %&gt;% 
+    dplyr::filter(Age == &quot;3M&quot;) %&gt;% 
+  ggplot(aes(x, y, colour = Genotype, group = sample)) +
+  geom_line() +
+  labs(
+    x = &quot;logCPM&quot;,
+    y = &quot;Density&quot;,
+    colour = &quot;Genotype&quot;
+  ) +
+  scale_color_viridis_d(option = &quot;plasma&quot;, end = 0.8) +
+  ggtitle(&quot;Before filtering&quot;) +
+  theme_bw()
+
+
+ggarrange(a, 
+           cpm(x_zhaoetal, log = TRUE) %&gt;%
+             as.data.frame() %&gt;%
+             pivot_longer(
+               cols = everything(),
+               names_to = &quot;sample&quot;,
+               values_to = &quot;logCPM&quot;
+             ) %&gt;% 
+             split(f = .$sample) %&gt;%
+             lapply(function(y){
+               d &lt;- density(y$logCPM)
+               tibble(
+                 sample = unique(y$sample),
+                 x = d$x,
+                 y = d$y
+               )
+             }) %&gt;%
+             bind_rows() %&gt;%
+             left_join(x_zhaoetal$samples) %&gt;%
+             ggplot(aes(x, y, colour = Genotype, group = sample)) +
+            geom_line() +
+            labs(
+              x = &quot;logCPM&quot;,
+              y = &quot;Density&quot;,
+               colour = &quot;Genotype&quot;
+             ) +
+             scale_color_viridis_d(option = &quot;plasma&quot;, end = 0.8) +
+             ggtitle(&quot;After filtering&quot;) +
+             theme_bw(), 
+           common.legend = TRUE, 
+          labels = &quot;AUTO&quot;) </code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-5-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>#ggsave(&quot;plotsforpub/filtering.png&quot;, width = 15, height = 5, units = &quot;cm&quot;, scale = 1.4)</code></pre>
+</div>
+<div id="pca-on-entire-dataset" class="section level1">
+<h1>PCA on entire dataset</h1>
+<pre class="r"><code>ggarrange(
+  x_zhaoetal %&gt;% 
+    cpm(log = TRUE) %&gt;% 
+    t() %&gt;% 
+    prcomp() %&gt;%
+    autoplot(data = tibble(sample = rownames(.$x)) %&gt;%
+               left_join(x_zhaoetal$samples),
+             colour = &quot;Genotype&quot;, 
+             shape = &quot;Sex&quot;, 
+             size = 4
+    ) +
+    theme_bw() +
+    scale_color_viridis_d(option = &quot;plasma&quot;, end = 0.8) +
+    theme(legend.position = &quot;left&quot;),
+  
+  x_zhaoetal %&gt;% 
+    cpm(log = TRUE) %&gt;% 
+    t() %&gt;% 
+    prcomp() %&gt;%
+    autoplot(data = tibble(sample = rownames(.$x)) %&gt;%
+               left_join(x_zhaoetal$samples),
+             colour = &quot;dateBirth&quot;, 
+             shape = &quot;Genotype&quot;, 
+             size = 4
+    ) +
+    theme_bw() +
+    scale_color_futurama() +
+    # scale_color_manual(values = brewer.pal(name = &quot;Paired&quot;, 
+    #                                        n = 11))+
+    theme(legend.position = &quot;right&quot;) +
+    labs(colour = &quot;Litter&quot;), 
+  common.legend = F, 
+  labels = &quot;AUTO&quot;
+)</code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-6-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code> # ggsave(&quot;plotsforpub/PCA_all.png&quot;, width = 18, height = 8, units = &quot;cm&quot;, scale = 1.4)
+
+ x_zhaoetal %&gt;% 
+    cpm(log = TRUE) %&gt;% 
+    t() %&gt;% 
+    prcomp() %&gt;%
+    autoplot(data = tibble(sample = rownames(.$x)) %&gt;%
+               left_join(x_zhaoetal$samples),
+             colour = &quot;lane&quot;, 
+             shape = &quot;Genotype&quot;, 
+             size = 4
+    ) +
+    theme_bw() +
+    scale_color_d3()</code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-6-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>    theme(legend.position = &quot;left&quot;)</code></pre>
+<pre><code>List of 1
+ $ legend.position: chr &quot;left&quot;
+ - attr(*, &quot;class&quot;)= chr [1:2] &quot;theme&quot; &quot;gg&quot;
+ - attr(*, &quot;complete&quot;)= logi FALSE
+ - attr(*, &quot;validate&quot;)= logi TRUE</code></pre>
+<pre class="r"><code>allsampHM &lt;- cpm(x_zhaoetal, log = TRUE) %&gt;% 
+  t() %&gt;% 
+  dist(method = &quot;euclidean&quot;) %&gt;% 
+  as.matrix()
+
+allsampHM_anno &lt;-  tibble(
+  sample = colnames(allsampHM)) %&gt;% 
+  left_join(x_zhaoetal$samples) %&gt;% 
+  dplyr::select(sample, Genotype, Sex , litter = dateBirth) %&gt;% 
+  column_to_rownames(&quot;sample&quot;)
+
+newCols &lt;- colorRampPalette(brewer.pal(name = &quot;Paired&quot;, 
+                                       n = length(unique(allsampHM_anno$litter))))
+mycolors &lt;- newCols(length(unique(allsampHM_anno$litter)))
+names(mycolors) &lt;- unique(allsampHM_anno$litter)
+
+
+mycolors &lt;- list(litter = mycolors, 
+                 Sex = c(&quot;male&quot; = &quot;blue&quot;, &quot;female&quot; = &quot;red&quot;), 
+                 Genotype = c(&quot;APOE3&quot; = &quot;black&quot;, &quot;APOE2&quot; = &quot;grey75&quot;, &quot;APOE4&quot; = &quot;grey35&quot;))  
+
+#png(&quot;plotsforpub/sampleheatmap.png&quot;, width = 1000, height = 1000, res = 100)
+pheatmap(allsampHM, 
+         color = viridis_pal()(1000), 
+         annotation_col = allsampHM_anno, 
+         annotation_colors = mycolors,
+         treeheight_row = 0, 
+         cellwidth = 8, 
+         cellheight = 8, 
+         fontsize_row = 7, 
+         fontsize_col = 7
+  )</code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-6-3.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>#dev.off()</code></pre>
+</div>
+<div id="library-sizes" class="section level1">
+<h1>Library sizes</h1>
+<pre class="r"><code>x_zhaoetal$samples %&gt;% 
+  ggplot(aes(x = sample, y = lib.size, fill = Genotype)) +
+  geom_col() +
+  facet_wrap(~Genotype, scales = &quot;free_x&quot;) +
+  theme_bw() +
+  easy_rotate_x_labels(angle = 315) </code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-7-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+<div id="chi-squre-tests-for-independence" class="section level1">
+<h1>chi squre tests for independence</h1>
+<pre class="r"><code>table(x_zhaoetal$samples$Genotype, x_zhaoetal$samples$dateBirth) %&gt;% 
+  chisq.test()</code></pre>
+<pre><code>
+    Pearson&#39;s Chi-squared test
+
+data:  .
+X-squared = 82.667, df = 20, p-value = 1.378e-09</code></pre>
+<pre class="r"><code># males only
+table(x_zhaoetal$samples %&gt;% 
+        dplyr::filter(Sex == &quot;male&quot;) %&gt;% 
+        .$Genotype,
+      x_zhaoetal$samples %&gt;% 
+        dplyr::filter(Sex == &quot;male&quot;) %&gt;% 
+        .$dateBirth
+) %&gt;% 
+  chisq.test()</code></pre>
+<pre><code>
+    Pearson&#39;s Chi-squared test
+
+data:  .
+X-squared = 43.125, df = 14, p-value = 8.182e-05</code></pre>
+<pre class="r"><code>## females only
+table(x_zhaoetal$samples %&gt;% 
+        dplyr::filter(Sex == &quot;female&quot;) %&gt;% 
+        .$Genotype,
+      x_zhaoetal$samples %&gt;% 
+        dplyr::filter(Sex == &quot;female&quot;) %&gt;% 
+        .$dateBirth
+) %&gt;% 
+  chisq.test()</code></pre>
+<pre><code>
+    Pearson&#39;s Chi-squared test
+
+data:  .
+X-squared = 39.286, df = 14, p-value = 0.0003294</code></pre>
+</div>
+<div id="de-analysis-initial" class="section level1">
+<h1>~~ DE analysis initial</h1>
+<div id="design-and-contrasts-matrix" class="section level2">
+<h2>design and contrasts matrix</h2>
+<pre class="r"><code>design &lt;- model.matrix(~0 + group,
+                       data = x_zhaoetal$samples) %&gt;% 
+  set_colnames(gsub(pattern = &quot;group&quot;,
+                    replacement = &quot;&quot;,
+                    x = colnames(.)))
+
+contrasts &lt;- makeContrasts(
+  levels = colnames(design), 
+  
+  `Female 2v3` = APOE2_3M_female - APOE3_3M_female,
+  `Male 2v3` = APOE2_3M_male - APOE3_3M_male,
+  `Female 4v3` = APOE4_3M_female - APOE3_3M_female,
+  `Male 4v3` = APOE4_3M_male - APOE3_3M_male
+  )</code></pre>
+</div>
+<div id="fit" class="section level2">
+<h2>fit</h2>
+<pre class="r"><code>fit_1_zhaoetal &lt;- x_zhaoetal %&gt;% 
+  glmFit(design)
+
+# call the toptables
+
+topTables_glm_zhaoetal &lt;- colnames(contrasts) %&gt;%
+  sapply(function(x){
+    glmLRT(fit_1_zhaoetal, contrast = contrasts[,x]) %&gt;%
+      topTags(n = Inf) %&gt;%
+      .[[&quot;table&quot;]] %&gt;%
+      as.data.frame() %&gt;% 
+      rownames_to_column(&quot;gene_id&quot;) %&gt;% 
+      as_tibble() %&gt;%
+      arrange(PValue) %&gt;%
+      mutate(
+        comparison = x,
+        DE = FDR &lt; 0.05) %&gt;% 
+      dplyr::select(gene_name, logFC, logCPM, PValue, FDR, description, everything())
+  }, simplify = FALSE)</code></pre>
+</div>
+<div id="vis" class="section level2">
+<h2>Vis</h2>
+<pre class="r"><code>topTables_glm_zhaoetal %&gt;% 
+  lapply(function(x){
+    x %&gt;%
+      mutate(direction = case_when(
+        sign(logFC) == &quot;1&quot; ~ &quot;up&quot;,
+        sign(logFC) == &quot;-1&quot; ~ &quot;down&quot;
+      ))
+  }) %&gt;%
+  bind_rows() %&gt;%
+  dplyr::filter(DE == TRUE) %&gt;% 
+  mutate(Sex = case_when(
+    grepl(comparison, pattern = &quot;Male&quot;) ~ &quot;male&quot;, 
+    grepl(comparison, pattern = &quot;Female&quot;) ~ &quot;female&quot;, 
+  ), 
+  comparison = case_when(
+    grepl(comparison, pattern = &quot;4v3&quot;) ~ &quot;APOE4 v APOE3&quot;, 
+    grepl(comparison, pattern = &quot;2v3&quot;) ~ &quot;APOE2 v APOE3&quot;, 
+  )) %&gt;% 
+  ggplot(aes(y = `comparison`)) +
+  geom_bar(stat = &quot;count&quot;,
+           width = 0.5,
+           aes(fill = `direction`),
+           position = &quot;dodge&quot;) +
+  easy_rotate_x_labels(angle = 315) +
+  theme_bw() +
+  scale_fill_npg() +
+  theme(legend.position = &quot;bottom&quot;) +
+  ggtitle(&quot;Number of DE genes in each comparison&quot;) +
+  labs(x = &quot;Number of DE genes&quot;,
+       y = &quot;Contrast&quot;,
+       colour = &quot;Direction of change&quot;) +
+  facet_wrap(~Sex, scales = &quot;free_y&quot;)</code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-11-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>  #ggsave(&quot;plotsforpub/initialDe.png&quot;, width = 10, height = 5, units = &quot;cm&quot;, dpi = 800, scale = 2)
+  
+
+topTables_glm_zhaoetal %&gt;% 
+  bind_rows() %&gt;% 
+  ggplot(aes(x = logFC, y = -log10(PValue))) +
+  geom_point(aes(colour = DE)) +
+  facet_wrap(~ comparison, scales = &quot;free&quot;) +
+  theme_bw() +
+  scale_color_manual(values = c(&quot;grey50&quot;, &quot;red&quot;))</code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-11-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>topTables_glm_zhaoetal %&gt;% 
+  bind_rows() %&gt;% 
+  ggplot(aes(x = logCPM, y = logFC)) +
+  geom_point(aes(colour = DE), alpha = 0.5) +
+  facet_wrap(~ comparison, scales = &quot;free&quot;) +
+  scale_color_manual(values = c(&quot;grey50&quot;, &quot;red&quot;)) +
+  theme_bw()</code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-11-3.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>ggarrange(topTables_glm_zhaoetal %&gt;% 
+  bind_rows() %&gt;% 
+  mutate(rankstat = sign(logFC)*-log10(PValue)) %&gt;% 
+  ggplot(aes(x = meanGC, y = rankstat)) +
+  geom_point(alpha = 0.5, 
+             aes(colour = DE)) +
+  coord_cartesian(ylim = c(-20, 20)) +
+  facet_wrap(~comparison, scales = &quot;free&quot;) +
+  scale_color_manual(values = c(&quot;grey50&quot;, &quot;red&quot;)) +
+  theme_bw() + 
+    labs(x = &quot;Weighted average %GC per gene&quot;, 
+         y = &quot;sign(logFC)*-log10(PValue)&quot;, 
+         colour = &quot;Differentially expxressed?&quot;) +
+  geom_smooth(se = F),
+
+topTables_glm_zhaoetal %&gt;% 
+  bind_rows() %&gt;% 
+  mutate(rankstat = sign(logFC)*-log10(PValue)) %&gt;% 
+  ggplot(aes(x = len, y = rankstat)) +
+  geom_point(alpha = 0.5, 
+             aes(colour = DE)) +
+  coord_cartesian(ylim = c(-20, 20)) +
+  scale_x_log10() +
+  facet_wrap(~ comparison, scales = &quot;free&quot;) +
+  scale_color_manual(values = c(&quot;grey50&quot;, &quot;red&quot;)) +
+  theme_bw() + 
+      labs(x = &quot;Average transcript length per gene &quot;, 
+         y = &quot;sign(logFC)*-log10(PValue)&quot;, 
+         colour = &quot;Differentially expxressed?&quot;) +
+  geom_smooth(se = F), 
+labels = c(&quot;B&quot;, &quot;C&quot;), 
+nrow = 1,
+common.legend = TRUE
+) </code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-11-4.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>  #ggsave(&quot;plotsforpub/GC_len.png&quot;, width = 18, height = 8, units = &quot;cm&quot;, dpi = 800, scale = 2)</code></pre>
+</div>
+</div>
+<div id="cqn" class="section level1">
+<h1>~~ cqn ~~</h1>
+<p>Since I observe bias for GC content and length for this dataset, <code>cqn</code> normalisation &lt;Hansen et al, 2012&gt; <a href="10.18129/B9.bioc.cqn">link</a> is warranted. <code>cqn</code> is a normalisation technique which produces an offset for each gene, which corrects for GC content and length. This offset is compatible with <code>edgeR</code>, so I will perform the cqn normalisation then use this offset with the <code>edgeR</code> generalised linear model capabilities (negative binomial distribution) and liklihood ratio tests for differential expression.</p>
+<pre class="r"><code>cqn_zhaoetal &lt;-
+  x_zhaoetal %&gt;% 
+  with(
+    cqn(
+      counts = counts,
+      x = genes$meanGC,
+      lengths = genes$len,
+      sizeFactors = samples$lib.size
+    )
+  )</code></pre>
+<div id="plot-out-the-model-fits" class="section level2">
+<h2>plot out the model fits</h2>
+<pre class="r"><code>par(mfrow = c(1, 2))
+cqnplot(cqn_zhaoetal, n = 1, xlab = &quot;GC Content&quot;)
+cqnplot(cqn_zhaoetal, n = 2, xlab = &quot;Length&quot;)</code></pre>
+<div class="figure" style="text-align: center">
+<img src="figure/APOE-TR_3m_12m.Rmd/plotCQN-1.png" alt="*Model fits for GC content and gene length under the CQN model. Variability is clearly visible, particularly for length*" width="672" />
+<p class="caption">
+<em>Model fits for GC content and gene length under the CQN model. Variability is clearly visible, particularly for length</em>
+</p>
+</div>
+<pre class="r"><code>par(mfrow = c(1, 1))</code></pre>
+</div>
+<div id="pca" class="section level2">
+<h2>PCA</h2>
+<p>PCA analysis was repeated. Similar clustering of samples was observed across PC1. However, samples appeared closer together.</p>
+<pre class="r"><code>logCPM_zhaeoetal &lt;- cqn_zhaoetal$y + cqn_zhaoetal$offset
+
+ggarrange(
+  logCPM_zhaeoetal %&gt;%
+    t() %&gt;%
+    prcomp() %&gt;% 
+    autoplot(data = tibble(sample = rownames(.$x)) %&gt;%
+               left_join(x_zhaoetal$samples),
+             colour = &quot;Genotype&quot;, 
+             shape = &quot;Sex&quot;, 
+             size = 4
+    ) +
+    theme_bw() +
+    scale_color_viridis_d(option = &quot;plasma&quot;, end = 0.8) +
+    theme(legend.position = &quot;left&quot;),
+  
+  logCPM_zhaeoetal %&gt;% 
+    t() %&gt;% 
+    prcomp() %&gt;%
+    autoplot(data = tibble(sample = rownames(.$x)) %&gt;%
+               left_join(x_zhaoetal$samples),
+             colour = &quot;dateBirth&quot;, 
+             shape = &quot;Genotype&quot;, 
+             size = 4
+    ) +
+    theme_bw() +
+    scale_color_futurama() +
+    theme(legend.position = &quot;right&quot;) +
+    labs(colour = &quot;Litter&quot;), 
+  common.legend = F, 
+  labels = &quot;AUTO&quot;
+) </code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-13-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>#ggsave(&quot;plotsforpub/PCA_cqn.png&quot;, width = 18, height = 8, units = &quot;cm&quot;, scale = 1.4)</code></pre>
+</div>
+</div>
+<div id="de-with-cqn" class="section level1">
+<h1>DE with cqn</h1>
+<pre class="r"><code># Add the offset to the dge object 
+x_zhaoetal$offset &lt;- cqn_zhaoetal$glm.offset
+
+# fit the glm
+fit_cqn &lt;- glmFit(x_zhaoetal, design)
+
+# call the top table
+toptables_cqn &lt;-  colnames(contrasts) %&gt;%
+  sapply(function(x){
+    glmLRT(fit_cqn, contrast = contrasts[,x]) %&gt;%
+      topTags(n = Inf) %&gt;%
+      .[[&quot;table&quot;]] %&gt;%
+      as.data.frame() %&gt;%
+      rownames_to_column(&quot;gene_id&quot;) %&gt;%
+      as_tibble() %&gt;%
+      arrange(PValue) %&gt;%
+      mutate(
+        coef = x,
+        pbonf = p.adjust(PValue, &quot;bonferroni&quot;),
+        DE = FDR &lt; 0.05) %&gt;%
+      dplyr::select(gene_name, logFC, logCPM, PValue, pbonf, FDR, description, everything())
+  }, simplify = FALSE)</code></pre>
+<div id="vis-1" class="section level3">
+<h3>vis</h3>
+<pre class="r"><code>toptables_cqn %&gt;% 
+  lapply(function(x){
+    x %&gt;%
+      mutate(Direction = case_when(
+        sign(logFC) == &quot;1&quot; ~ &quot;up&quot;,
+        sign(logFC) == &quot;-1&quot; ~ &quot;down&quot;
+      ))
+  }) %&gt;%
+  bind_rows() %&gt;%
+  mutate(Sex = case_when(
+    grepl(coef, pattern = &quot;Male&quot;) ~ &quot;male&quot;, 
+    grepl(coef, pattern = &quot;Female&quot;) ~ &quot;female&quot;, 
+  ), 
+  comparison = case_when(
+    grepl(coef, pattern = &quot;4v3&quot;) ~ &quot;APOE4 v APOE3&quot;, 
+    grepl(coef, pattern = &quot;2v3&quot;) ~ &quot;APOE2 v APOE3&quot;, 
+  )) %&gt;% 
+  dplyr::filter(DE == TRUE) %&gt;%
+  ggplot(aes(y = `comparison`)) +
+  geom_bar(stat = &quot;count&quot;,
+           width = 0.5,
+           aes(fill = Direction),
+           position = &quot;dodge&quot;) +
+  easy_rotate_x_labels(angle = 315) +
+  theme_bw() +
+  scale_fill_npg() +
+  theme(legend.position = &quot;bottom&quot;) +
+  ggtitle(&quot;Number of DE genes in each comparison&quot;) +
+  labs(x = &quot;Number of DE genes&quot;,
+       y = &quot;Contrast&quot;,
+       colour = &quot;Direction of change&quot;) +
+  facet_wrap(~Sex, scales = &quot;free_y&quot;) </code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-15-1.png" width="672" height="100%" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>  #ggsave(&quot;plotsforpub/cqn_noDEgenes.png&quot;, width = 10, height = 5, units = &quot;cm&quot;, dpi = 800, scale = 2)
+
+ggarrange(
+ggarrange(toptables_cqn %&gt;% 
+  bind_rows() %&gt;% 
+  mutate(rankstat = sign(logFC)*-log10(PValue)) %&gt;% 
+  ggplot(aes(x = meanGC, y = rankstat)) +
+  geom_point(alpha = 0.5, 
+             aes(colour = DE)) +
+  coord_cartesian(ylim = c(-20, 20)) +
+  facet_wrap(~coef, scales = &quot;free&quot;) +
+  scale_color_manual(values = c(&quot;grey50&quot;, &quot;red&quot;)) +
+  theme_bw() + 
+    labs(x = &quot;Weighted average %GC per gene&quot;, 
+         y = &quot;sign(logFC)*-log10(PValue)&quot;, 
+         colour = &quot;Differentially expxressed?&quot;) +
+  geom_smooth(se = F),
+
+toptables_cqn %&gt;% 
+  bind_rows() %&gt;% 
+  mutate(rankstat = sign(logFC)*-log10(PValue)) %&gt;% 
+  ggplot(aes(x = len, y = rankstat)) +
+  geom_point(alpha = 0.5, 
+             aes(colour = DE)) +
+  coord_cartesian(ylim = c(-20, 20)) +
+  scale_x_log10() +
+  facet_wrap(~ coef, scales = &quot;free&quot;) +
+  scale_color_manual(values = c(&quot;grey50&quot;, &quot;red&quot;)) +
+  theme_bw() + 
+      labs(x = &quot;Average transcript length per gene &quot;, 
+         y = &quot;sign(logFC)*-log10(PValue)&quot;, 
+         colour = &quot;Differentially expxressed?&quot;) +
+  geom_smooth(se = F), 
+labels = c(&quot;B&quot;, &quot;C&quot;), 
+nrow = 1,
+common.legend = TRUE
+) ,  
+ggarrange(
+toptables_cqn %&gt;% 
+  bind_rows() %&gt;% 
+   mutate(Sex = case_when(
+    grepl(coef, pattern = &quot;Male&quot;) ~ &quot;male&quot;, 
+    grepl(coef, pattern = &quot;Female&quot;) ~ &quot;female&quot;, 
+  ), 
+  comparison = case_when(
+    grepl(coef, pattern = &quot;4v3&quot;) ~ &quot;APOE4 v APOE3&quot;, 
+    grepl(coef, pattern = &quot;2v3&quot;) ~ &quot;APOE2 v APOE3&quot;, 
+  )) %&gt;% 
+  ggplot(aes(x = logFC, y = -log10(PValue))) +
+  geom_point(aes(colour = DE), alpha = 0.5) +
+  facet_wrap(~Sex+comparison, scales = &quot;free_y&quot;) +
+  theme_bw() +
+  scale_y_continuous(limits = c(0, 20)) +
+  scale_x_continuous(limits = c(-2, 2)) +
+  labs(colour = &quot;Differentially expressed?&quot;) +
+  scale_color_manual(values = c(&quot;grey50&quot;, &quot;red&quot;)),
+
+toptables_cqn %&gt;% 
+  bind_rows() %&gt;% 
+   mutate(Sex = case_when(
+    grepl(coef, pattern = &quot;Male&quot;) ~ &quot;male&quot;, 
+    grepl(coef, pattern = &quot;Female&quot;) ~ &quot;female&quot;, 
+  ), 
+  comparison = case_when(
+    grepl(coef, pattern = &quot;4v3&quot;) ~ &quot;APOE4 v APOE3&quot;, 
+    grepl(coef, pattern = &quot;2v3&quot;) ~ &quot;APOE2 v APOE3&quot;, 
+  )) %&gt;% 
+  ggplot(aes(x = logCPM, y = logFC)) +
+  geom_point(aes(colour = DE), alpha = 0.5) +
+  facet_wrap(~Sex+comparison, scales = &quot;free_y&quot;) +
+  theme_bw() +
+  scale_y_continuous(limits = c(-2, 2)) +
+  labs(colour = &quot;Differentially expressed?&quot;) +
+  scale_color_manual(values = c(&quot;grey50&quot;, &quot;red&quot;)),
+labels = c(&quot;D&quot;, &quot;E&quot;), 
+common.legend = TRUE
+) , 
+ncol = 1, 
+common.legend = TRUE
+) </code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-15-2.png" width="672" height="100%" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>  #ggsave(&quot;plotsforpub/GC_lenandMDvol_cqn.png&quot;, width = 18, height = 20, units = &quot;cm&quot;, dpi = 800, scale = 2)</code></pre>
+</div>
+</div>
+<div id="enrichment-testing-within-the-de-genes-using-goseq" class="section level1">
+<h1>~~ Enrichment testing within the DE genes using goseq:</h1>
+<div id="gene-sets" class="section level2">
+<h2>gene sets</h2>
+<p>First I will import the gene sets I will use in this analysis.</p>
+<pre class="r"><code>KEGG &lt;- msigdbr(&quot;Mus musculus&quot;, category = &quot;C2&quot;, subcategory = &quot;CP:KEGG&quot;)  %&gt;% 
+  left_join(gc_len %&gt;% 
+              dplyr::select(entrez_gene = entrezid) %&gt;% 
+              as.data.frame() %&gt;% 
+              rownames_to_column(&quot;gene_id&quot;) %&gt;% 
+              as_tibble() %&gt;% 
+              unnest()
+            ) %&gt;%
+  dplyr::filter(gene_id %in% rownames(x_zhaoetal)) %&gt;%
+  distinct(gs_name, gene_id, .keep_all = TRUE) %&gt;% 
+  split(f = .$gs_name) %&gt;%
+  lapply(extract2, &quot;gene_id&quot;)
+
+ireGenes &lt;- 
+  read_excel(&quot;data/ireGenes.xlsx&quot;, sheet = &quot;Mouse IREs&quot;) %&gt;% 
+    gather(key = &quot;ire&quot;, value = &quot;gene_id&quot;) %&gt;% 
+    left_join(x_zhaoetal$genes %&gt;% 
+                rownames_to_column(&quot;gene_id&quot;)) %&gt;% 
+    dplyr::filter(gene_name %in% toptables_cqn$`Female 2v3`$gene_name) %&gt;% 
+    split(f = .$ire) %&gt;% 
+    lapply(magrittr::extract2, &quot;gene_id&quot;)</code></pre>
+</div>
+<div id="make-the-pwfs" class="section level2">
+<h2>make the pwfs</h2>
+<p>The avergae transcript length per gene was used to calculate the pwf.</p>
+<pre class="r"><code>pwfs &lt;- toptables_cqn %&gt;% 
+  lapply(function(x) {
+    x %&gt;%
+      dplyr::select(gene_id, DE, len) %&gt;%
+      distinct(gene_id, .keep_all = TRUE) %&gt;% 
+      with(
+        nullp(
+          DEgenes = structure(
+            as.integer(DE), names = gene_id
+          ), 
+          genome = &quot;mm9&quot;, 
+          id = &quot;ensGene&quot;, 
+          bias.data = len,
+          plot.fit = FALSE
+        )
+      )
+  })</code></pre>
+<p>One large enrichment test was performed on the overall gene sets</p>
+<pre class="r"><code>goseq_res &lt;- pwfs %&gt;% 
+  lapply(function(x) {
+    goseq(x, gene2cat = c(KEGG, ireGenes)) %&gt;% 
+      as_tibble %&gt;%
+      dplyr::filter(numDEInCat &gt; 0) %&gt;%
+      mutate(FDR = p.adjust(over_represented_pvalue, method = &quot;fdr&quot;)) %&gt;% 
+      dplyr::select(-under_represented_pvalue) 
+  }) 
+
+goseq_res$`Female 2v3` %&lt;&gt;% mutate(coef = &quot;Female 2v3&quot;)
+goseq_res$`Male 2v3` %&lt;&gt;% mutate(coef = &quot;Male 2v3&quot;)
+goseq_res$`Female 4v3` %&lt;&gt;% mutate(coef = &quot;Female 4v3&quot;)
+goseq_res$`Male 4v3` %&lt;&gt;% mutate(coef = &quot;Male 4v3&quot;)</code></pre>
+<div id="results" class="section level3">
+<h3>results</h3>
+<pre class="r"><code>goseq_res$`Female 2v3` %&gt;% 
+  head(5) %&gt;% 
+  kable(caption = &quot;Top 5 over-represented KEGG or IRE gene sets in female APOE2 mice&quot;) %&gt;% 
+  kable_styling()</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<caption>
+Top 5 over-represented KEGG or IRE gene sets in female APOE2 mice
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+category
+</th>
+<th style="text-align:right;">
+over_represented_pvalue
+</th>
+<th style="text-align:right;">
+numDEInCat
+</th>
+<th style="text-align:right;">
+numInCat
+</th>
+<th style="text-align:right;">
+FDR
+</th>
+<th style="text-align:left;">
+coef
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+KEGG_STEROID_BIOSYNTHESIS
+</td>
+<td style="text-align:right;">
+0.0000001
+</td>
+<td style="text-align:right;">
+9
+</td>
+<td style="text-align:right;">
+14
+</td>
+<td style="text-align:right;">
+0.0000102
+</td>
+<td style="text-align:left;">
+Female 2v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_ANTIGEN_PROCESSING_AND_PRESENTATION
+</td>
+<td style="text-align:right;">
+0.0049598
+</td>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:right;">
+36
+</td>
+<td style="text-align:right;">
+0.4017455
+</td>
+<td style="text-align:left;">
+Female 2v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_ADHERENS_JUNCTION
+</td>
+<td style="text-align:right;">
+0.0140867
+</td>
+<td style="text-align:right;">
+11
+</td>
+<td style="text-align:right;">
+69
+</td>
+<td style="text-align:right;">
+0.7606842
+</td>
+<td style="text-align:left;">
+Female 2v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_GLYCOSAMINOGLYCAN_DEGRADATION
+</td>
+<td style="text-align:right;">
+0.0289538
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+16
+</td>
+<td style="text-align:right;">
+0.8559768
+</td>
+<td style="text-align:left;">
+Female 2v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_RETINOL_METABOLISM
+</td>
+<td style="text-align:right;">
+0.0367324
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+13
+</td>
+<td style="text-align:right;">
+0.8559768
+</td>
+<td style="text-align:left;">
+Female 2v3
+</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>goseq_res$`Female 4v3` %&gt;% 
+  head(5) %&gt;% 
+  kable(caption = &quot;Top 5 over-represented KEGG or IRE gene sets in female APOE4 mice&quot;) %&gt;% 
+  kable_styling()</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<caption>
+Top 5 over-represented KEGG or IRE gene sets in female APOE4 mice
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+category
+</th>
+<th style="text-align:right;">
+over_represented_pvalue
+</th>
+<th style="text-align:right;">
+numDEInCat
+</th>
+<th style="text-align:right;">
+numInCat
+</th>
+<th style="text-align:right;">
+FDR
+</th>
+<th style="text-align:left;">
+coef
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+KEGG_PYRUVATE_METABOLISM
+</td>
+<td style="text-align:right;">
+0.0009573
+</td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+33
+</td>
+<td style="text-align:right;">
+0.0825389
+</td>
+<td style="text-align:left;">
+Female 4v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_ARGININE_AND_PROLINE_METABOLISM
+</td>
+<td style="text-align:right;">
+0.0010650
+</td>
+<td style="text-align:right;">
+9
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:right;">
+0.0825389
+</td>
+<td style="text-align:left;">
+Female 4v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_SPLICEOSOME
+</td>
+<td style="text-align:right;">
+0.0053173
+</td>
+<td style="text-align:right;">
+16
+</td>
+<td style="text-align:right;">
+123
+</td>
+<td style="text-align:right;">
+0.2747272
+</td>
+<td style="text-align:left;">
+Female 4v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_GLYCOLYSIS_GLUCONEOGENESIS
+</td>
+<td style="text-align:right;">
+0.0116496
+</td>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:right;">
+39
+</td>
+<td style="text-align:right;">
+0.4514230
+</td>
+<td style="text-align:left;">
+Female 4v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_AMINOACYL_TRNA_BIOSYNTHESIS
+</td>
+<td style="text-align:right;">
+0.0164772
+</td>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:right;">
+41
+</td>
+<td style="text-align:right;">
+0.4658360
+</td>
+<td style="text-align:left;">
+Female 4v3
+</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>goseq_res$`Male 2v3` %&gt;% 
+  head(5) %&gt;% 
+  kable(caption = &quot;Top 5 over-represented KEGG or IRE gene sets in male APOE2 mice&quot;) %&gt;% 
+  kable_styling()</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<caption>
+Top 5 over-represented KEGG or IRE gene sets in male APOE2 mice
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+category
+</th>
+<th style="text-align:right;">
+over_represented_pvalue
+</th>
+<th style="text-align:right;">
+numDEInCat
+</th>
+<th style="text-align:right;">
+numInCat
+</th>
+<th style="text-align:right;">
+FDR
+</th>
+<th style="text-align:left;">
+coef
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+KEGG_RENAL_CELL_CARCINOMA
+</td>
+<td style="text-align:right;">
+0.0447702
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+69
+</td>
+<td style="text-align:right;">
+0.9447404
+</td>
+<td style="text-align:left;">
+Male 2v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_NON_SMALL_CELL_LUNG_CANCER
+</td>
+<td style="text-align:right;">
+0.0557063
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+51
+</td>
+<td style="text-align:right;">
+0.9447404
+</td>
+<td style="text-align:left;">
+Male 2v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+All 3’ IREs
+</td>
+<td style="text-align:right;">
+0.0655851
+</td>
+<td style="text-align:right;">
+70
+</td>
+<td style="text-align:right;">
+1995
+</td>
+<td style="text-align:right;">
+0.9447404
+</td>
+<td style="text-align:left;">
+Male 2v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_VEGF_SIGNALING_PATHWAY
+</td>
+<td style="text-align:right;">
+0.0888854
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+61
+</td>
+<td style="text-align:right;">
+0.9447404
+</td>
+<td style="text-align:left;">
+Male 2v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_GRAFT_VERSUS_HOST_DISEASE
+</td>
+<td style="text-align:right;">
+0.0905616
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+0.9447404
+</td>
+<td style="text-align:left;">
+Male 2v3
+</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>goseq_res$`Male 4v3` %&gt;% 
+  head(5) %&gt;% 
+  kable(caption = &quot;Top 5 over-represented KEGG or IRE gene sets in male APOE4 mice&quot;) %&gt;% 
+  kable_styling()</code></pre>
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<caption>
+Top 5 over-represented KEGG or IRE gene sets in male APOE4 mice
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+category
+</th>
+<th style="text-align:right;">
+over_represented_pvalue
+</th>
+<th style="text-align:right;">
+numDEInCat
+</th>
+<th style="text-align:right;">
+numInCat
+</th>
+<th style="text-align:right;">
+FDR
+</th>
+<th style="text-align:left;">
+coef
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+KEGG_CALCIUM_SIGNALING_PATHWAY
+</td>
+<td style="text-align:right;">
+0.0000746
+</td>
+<td style="text-align:right;">
+62
+</td>
+<td style="text-align:right;">
+136
+</td>
+<td style="text-align:right;">
+0.0138787
+</td>
+<td style="text-align:left;">
+Male 4v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_NEUROACTIVE_LIGAND_RECEPTOR_INTERACTION
+</td>
+<td style="text-align:right;">
+0.0004023
+</td>
+<td style="text-align:right;">
+64
+</td>
+<td style="text-align:right;">
+149
+</td>
+<td style="text-align:right;">
+0.0374107
+</td>
+<td style="text-align:left;">
+Male 4v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_TASTE_TRANSDUCTION
+</td>
+<td style="text-align:right;">
+0.0011929
+</td>
+<td style="text-align:right;">
+13
+</td>
+<td style="text-align:right;">
+20
+</td>
+<td style="text-align:right;">
+0.0739621
+</td>
+<td style="text-align:left;">
+Male 4v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_VASCULAR_SMOOTH_MUSCLE_CONTRACTION
+</td>
+<td style="text-align:right;">
+0.0033579
+</td>
+<td style="text-align:right;">
+38
+</td>
+<td style="text-align:right;">
+89
+</td>
+<td style="text-align:right;">
+0.1561416
+</td>
+<td style="text-align:left;">
+Male 4v3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+KEGG_RIBOSOME
+</td>
+<td style="text-align:right;">
+0.0064322
+</td>
+<td style="text-align:right;">
+28
+</td>
+<td style="text-align:right;">
+82
+</td>
+<td style="text-align:right;">
+0.2159789
+</td>
+<td style="text-align:left;">
+Male 4v3
+</td>
+</tr>
+</tbody>
+</table>
+<pre class="r"><code>sig.genesets.goseq &lt;- goseq_res %&gt;% 
+  bind_rows() %&gt;% 
+  dplyr::filter(FDR &lt; 0.05) %&gt;% .$category
+
+anno_hm &lt;- 
+  toptables_cqn %&gt;% 
+  bind_rows() %&gt;% 
+  dplyr::filter(gene_id %in% c(KEGG$KEGG_CALCIUM_SIGNALING_PATHWAY)
+  ) %&gt;% 
+  dplyr::select(gene_name, DE, coef) %&gt;% 
+  mutate(DE = as.character(DE)) %&gt;% 
+  spread(key = &quot;coef&quot;, value = &quot;DE&quot;) %&gt;% 
+  column_to_rownames(&quot;gene_name&quot;) 
+
+toptables_cqn %&gt;% 
+  bind_rows() %&gt;% 
+  dplyr::filter(gene_id %in% KEGG$KEGG_CALCIUM_SIGNALING_PATHWAY) %&gt;% 
+  dplyr::select(gene_name, logFC, coef) %&gt;% 
+  spread(key = &quot;coef&quot;, value = &quot;logFC&quot;) %&gt;% 
+  column_to_rownames(&quot;gene_name&quot;) %&gt;% 
+  t() %&gt;% 
+  pheatmap(color = colorRampPalette(rev(brewer.pal(name = &quot;RdBu&quot;, n = 5)))(100), 
+           breaks = c(seq(min(.), 0, length.out=ceiling(100/2) + 1), 
+                      seq(max(.)/100, max(.), length.out=floor(100/2))), 
+           # cellwidth = 7, 
+           # cellheight = 7, 
+           fontsize = 7, 
+           annotation_col = anno_hm, 
+           annotation_colors = list(
+             `Male 4v3` = c(&quot;FALSE&quot; = &quot;grey50&quot;, &quot;TRUE&quot; = &quot;green&quot;),
+             `Female 4v3` = c(&quot;FALSE&quot; = &quot;grey50&quot;, &quot;TRUE&quot; = &quot;green&quot;), 
+             `Male 2v3` = c(&quot;FALSE&quot; = &quot;grey50&quot;, &quot;TRUE&quot; = &quot;green&quot;),
+             `Female 2v3` = c(&quot;FALSE&quot; = &quot;grey50&quot;, &quot;TRUE&quot; = &quot;green&quot;)
+           )
+  )</code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-20-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>#png(&quot;plotsforpub/upsetAPOE4DEgenes.png&quot;, width = 5000, height = 2500, res = 1000)
+list(
+  KEGG_NEUROACTIVE_LIGAND_RECEPTOR_INTERACTION = toptables_cqn$`Male 4v3` %&gt;% 
+    bind_rows() %&gt;% 
+    dplyr::filter(DE == TRUE, 
+                  gene_id %in% KEGG$KEGG_NEUROACTIVE_LIGAND_RECEPTOR_INTERACTION) %&gt;% 
+    .$gene_name, 
+  KEGG_CALCIUM_SIGNALING_PATHWAY = toptables_cqn$`Male 4v3` %&gt;% 
+    bind_rows() %&gt;% 
+    dplyr::filter(DE == TRUE, 
+                  gene_id %in% KEGG$KEGG_CALCIUM_SIGNALING_PATHWAY) %&gt;% 
+    .$gene_name
+ ) %&gt;% 
+  fromList() %&gt;% 
+  upset(order.by = &#39;freq&#39;, nsets = length(.))</code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-20-2.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>#dev.off()</code></pre>
+<!-- ## pathviews -->
+<!-- ```{r} -->
+<!-- setwd("pathviews/") -->
+<!-- pathview(species = "mmu",  -->
+<!--          pathway.id = "04020",  -->
+<!--          gene.data = toptables_cqn$`Male 4v3` %>%  -->
+<!--            dplyr::select(gene_id, logFC) %>%  -->
+<!--            column_to_rownames("gene_id"),  -->
+<!--          gene.idtype = "ENSEMBL", -->
+<!--          limit = list(gene = 2,  -->
+<!--                       cpd = 0.3),   -->
+<!--          low = list(gene = "#2166AC",   -->
+<!--                     cpd = "white"),  -->
+<!--          high = list(gene = "#B2182B",   -->
+<!--                      cpd = "white"),  -->
+<!--          bins = list(gene = 1,   -->
+<!--                      cpd = 20) -->
+<!--           ) -->
+<!-- pathview(species = "mmu",  -->
+<!--          pathway.id = "04080",  -->
+<!--          gene.data = toptables_cqn$`Male 4v3` %>%  -->
+<!--            dplyr::select(gene_id, logFC) %>%  -->
+<!--            column_to_rownames("gene_id"),  -->
+<!--          gene.idtype = "ENSEMBL", -->
+<!--          limit = list(gene = 2,  -->
+<!--                       cpd = 0.3),   -->
+<!--          low = list(gene = "#2166AC",   -->
+<!--                     cpd = "white"),  -->
+<!--          high = list(gene = "#B2182B",   -->
+<!--                      cpd = "white"),  -->
+<!--          bins = list(gene = 20,   -->
+<!--                      cpd = 20) -->
+<!--           ) -->
+<!-- pathview(species = "mmu",  -->
+<!--          pathway.id = "00100",  -->
+<!--          gene.data = toptables_cqn$`Female 2v3` %>%  -->
+<!--            dplyr::select(gene_id, logFC) %>%  -->
+<!--            column_to_rownames("gene_id"),  -->
+<!--          gene.idtype = "ENSEMBL", -->
+<!--          limit = list(gene = 0.2,  -->
+<!--                       cpd = 0.3),   -->
+<!--          low = list(gene = "#2166AC",   -->
+<!--                     cpd = "white"),  -->
+<!--          high = list(gene = "#B2182B",   -->
+<!--                      cpd = "white"),  -->
+<!--          bins = list(gene = 20,   -->
+<!--                      cpd = 20) -->
+<!--           ) -->
+<!-- pathview(species = "mmu",  -->
+<!--          pathway.id = "00190",  -->
+<!--          gene.data = toptables_cqn$`Male 4v3` %>%  -->
+<!--            dplyr::select(gene_id, logFC) %>%  -->
+<!--            column_to_rownames("gene_id"),  -->
+<!--          gene.idtype = "ENSEMBL", -->
+<!--          limit = list(gene = 0.2,  -->
+<!--                       cpd = 0.3),   -->
+<!--          low = list(gene = "#2166AC",   -->
+<!--                     cpd = "white"),  -->
+<!--          high = list(gene = "#B2182B",   -->
+<!--                      cpd = "white"),  -->
+<!--          bins = list(gene = 20,   -->
+<!--                      cpd = 20) -->
+<!--           ) -->
+<!-- pathview(species = "mmu",  -->
+<!--          pathway.id = "00190",  -->
+<!--          gene.data = toptables_cqn$`Male 2v3` %>%  -->
+<!--            dplyr::select(gene_id, logFC) %>%  -->
+<!--            column_to_rownames("gene_id"),  -->
+<!--          gene.idtype = "ENSEMBL", -->
+<!--          limit = list(gene = 0.2,  -->
+<!--                       cpd = 0.3),   -->
+<!--          low = list(gene = "#2166AC",   -->
+<!--                     cpd = "white"),  -->
+<!--          high = list(gene = "#B2182B",   -->
+<!--                      cpd = "white"),  -->
+<!--          bins = list(gene = 20,   -->
+<!--                      cpd = 20) -->
+<!--           ) -->
+<!-- pathview(species = "mmu",  -->
+<!--          pathway.id = "03010",  -->
+<!--          gene.data = toptables_cqn$`Male 4v3` %>%  -->
+<!--            dplyr::select(gene_id, logFC) %>%  -->
+<!--            column_to_rownames("gene_id"),  -->
+<!--          gene.idtype = "ENSEMBL", -->
+<!--          limit = list(gene = 0.2,  -->
+<!--                       cpd = 0.3),   -->
+<!--          low = list(gene = "#2166AC",   -->
+<!--                     cpd = "white"),  -->
+<!--          high = list(gene = "#B2182B",   -->
+<!--                      cpd = "white"),  -->
+<!--          bins = list(gene = 20,   -->
+<!--                      cpd = 20) -->
+<!--           ) -->
+<!-- pathview(species = "mmu",  -->
+<!--          pathway.id = "04150",  -->
+<!--          gene.data = toptables_cqn$`Male 4v3` %>%  -->
+<!--            dplyr::select(gene_id, logFC) %>%  -->
+<!--            column_to_rownames("gene_id"),  -->
+<!--          gene.idtype = "ENSEMBL", -->
+<!--          limit = list(gene = 0.2,  -->
+<!--                       cpd = 0.3),   -->
+<!--          low = list(gene = "#2166AC",   -->
+<!--                     cpd = "white"),  -->
+<!--          high = list(gene = "#B2182B",   -->
+<!--                      cpd = "white"),  -->
+<!--          bins = list(gene = 20,   -->
+<!--                      cpd = 20) -->
+<!--           ) -->
+<!-- pathview(species = "mmu",  -->
+<!--          pathway.id = "04150",  -->
+<!--          gene.data = toptables_cqn$`Female 4v3` %>%  -->
+<!--            dplyr::select(gene_id, logFC) %>%  -->
+<!--            column_to_rownames("gene_id"),  -->
+<!--          gene.idtype = "ENSEMBL", -->
+<!--          limit = list(gene = 0.5,  -->
+<!--                       cpd = 0.3),   -->
+<!--          low = list(gene = "#2166AC",   -->
+<!--                     cpd = "white"),  -->
+<!--          high = list(gene = "#B2182B",   -->
+<!--                      cpd = "white"),  -->
+<!--          bins = list(gene = 20,   -->
+<!--                      cpd = 20) -->
+<!--           ) -->
+<!--  setwd("~/Documents/apoe") -->
+<!-- ``` -->
+</div>
+</div>
+<div id="kegg-ribo-pheatmap" class="section level2">
+<h2>KEGG ribo pheatmap</h2>
+<pre class="r"><code>#png(&quot;plotsforpub/kegg_ribo.png&quot;, width = 35, height = 20, units = &quot;cm&quot;, res = 800)
+toptables_cqn %&gt;% 
+  bind_rows() %&gt;% 
+  dplyr::filter(gene_id %in% KEGG$KEGG_RIBOSOME) %&gt;%
+  dplyr::select(gene_name, coef, logFC) %&gt;% 
+  spread(key = &quot;coef&quot;, value = logFC) %&gt;% 
+  column_to_rownames(&quot;gene_name&quot;) %&gt;% 
+  t() %&gt;% 
+  pheatmap(color = colorRampPalette(rev(brewer.pal(n = 7, name =
+                                                     &quot;RdBu&quot;)))(100), 
+           breaks = c(seq(min(.), 0, length.out=ceiling(100/2) + 1), 
+                      seq(max(.)/100, max(.), length.out=floor(100/2))), 
+           annotation_row = tibble(comparison = rownames(.)) %&gt;% 
+             mutate(Sex = case_when(
+               grepl(comparison, pattern = &quot;Male&quot;) ~ &quot;male&quot;, 
+               grepl(comparison, pattern = &quot;Female&quot;) ~ &quot;female&quot;, 
+             ), 
+             APOE = case_when(
+               grepl(comparison, pattern = &quot;4v3&quot;) ~ &quot;APOE4 v APOE3&quot;, 
+               grepl(comparison, pattern = &quot;2v3&quot;) ~ &quot;APOE2 v APOE3&quot;, 
+             )) %&gt;% 
+             column_to_rownames(&quot;comparison&quot;), 
+           annotation_col = toptables_cqn %&gt;% 
+             bind_rows() %&gt;% 
+             dplyr::filter(gene_id %in% KEGG$KEGG_RIBOSOME) %&gt;% 
+             dplyr::select(gene_name, DE, coef) %&gt;% 
+             mutate(coef = str_replace(coef, pattern = &quot;2&quot;, replacement = &quot;APOE2&quot;), 
+                    coef = str_replace(coef, pattern = &quot;3&quot;, replacement = &quot;APOE3&quot;), 
+                    coef = str_replace(coef, pattern = &quot;4&quot;, replacement = &quot;APOE4&quot;), 
+                    coef =  str_replace(coef, pattern = &quot;v&quot;, replacement = &quot; v &quot;), 
+                    DE = as.character(DE)
+             ) %&gt;% 
+             spread(key = &quot;coef&quot;, value = &quot;DE&quot;) %&gt;% 
+             column_to_rownames(&quot;gene_name&quot;),
+           annotation_colors = list(&quot;Male APOE4 v APOE3&quot; = c(&quot;FALSE&quot; = &quot;grey60&quot;, 
+                                                        &quot;TRUE&quot; = &quot;green2&quot;), 
+                                    &quot;Male APOE2 v APOE3&quot; = c(&quot;FALSE&quot; = &quot;grey60&quot;, 
+                                                        &quot;TRUE&quot; = &quot;green2&quot;), 
+                                    &quot;Female APOE4 v APOE3&quot; = c(&quot;FALSE&quot; = &quot;grey60&quot;, 
+                                                        &quot;TRUE&quot; = &quot;green2&quot;), 
+                                    &quot;Female APOE2 v APOE3&quot; = c(&quot;FALSE&quot; = &quot;grey60&quot;, 
+                                                        &quot;TRUE&quot; = &quot;green2&quot;), 
+                                    APOE = c( &quot;APOE2 v APOE3&quot; = &quot;purple&quot;, 
+                                              &quot;APOE4 v APOE3&quot; = &quot;orange&quot;), 
+                                    Sex = c(male = &quot;black&quot;, 
+                                            female = &quot;grey50&quot;)
+                                    ),
+           cellheight = 15, 
+           legend_breaks = c(seq(-.2, 0.2, by = 0.1), max(.)),
+           legend_labels = c(seq(-.2, 0.2, by = 0.1), &quot;logFC&quot;),
+           border_color = NA, 
+           main = &quot;KEGG_RIBOSOME&quot;, 
+           fontsize_col= 5
+           
+  )</code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-21-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>#dev.off()</code></pre>
+</div>
+<div id="ranked-lists-using-fry-camera-and-fgsea" class="section level2">
+<h2>ranked lists using fry, camera and fgsea</h2>
+<pre class="r"><code>fryRes &lt;- colnames(contrasts) %&gt;% 
+  sapply(function(x){
+    logCPM_zhaeoetal %&gt;% 
+      fry(index = c(KEGG, ireGenes),
+          design = design,
+          contrast= contrasts[,x],
+          sort = &quot;directional&quot;
+      ) %&gt;% 
+      as.data.frame() %&gt;% 
+      rownames_to_column(&quot;geneset&quot;) %&gt;% 
+      as_tibble() %&gt;% 
+      mutate(pbonf = p.adjust(PValue, &quot;bonferroni&quot;), 
+             coef = x)
+  }, simplify = FALSE
+  )
+
+
+camera_res &lt;- colnames(contrasts) %&gt;% 
+ sapply(function(x){
+    logCPM_zhaeoetal %&gt;% 
+      camera(index = c(KEGG, ireGenes),
+          design = design,
+          contrast= contrasts[,x]
+      ) %&gt;% 
+      as.data.frame() %&gt;% 
+      rownames_to_column(&quot;geneset&quot;) %&gt;% 
+      as_tibble() %&gt;% 
+      mutate(pbonf = p.adjust(PValue, &quot;bonferroni&quot;), 
+             coef = x)
+  }, simplify = FALSE
+  )
+
+
+# GSEA
+
+# create a rank stat for fgsea
+ranks &lt;- 
+  sapply(toptables_cqn, function(x) {
+    x %&gt;% 
+      mutate(PValue_withsign = sign(logFC) * log10(1/PValue)) %&gt;% 
+      arrange(PValue_withsign) %&gt;% 
+      dplyr::select(c(&quot;gene_id&quot;, &quot;PValue_withsign&quot;)) %&gt;% #only want the Pvalue with sign
+      with(structure(PValue_withsign, names = gene_id)) %&gt;% 
+      rev() # reverse so the start of the list is upregulated genes
+  }, simplify = FALSE)
+
+# Run fgsea
+# This takes a while due to the number of permutations
+# set a seed for a reproducible result
+set.seed(33)
+fgsea_res &lt;- ranks %&gt;%
+  lapply(function(x){
+    fgseaMultilevel(stats = x, pathways = c(KEGG, ireGenes)) %&gt;%
+      as_tibble() %&gt;%
+      dplyr::rename(FDR = padj) %&gt;%
+      mutate(padj = p.adjust(pval, &quot;bonferroni&quot;)) %&gt;%
+      dplyr::select(c(geneset = pathway), pval, FDR, padj, everything()) %&gt;%
+      arrange(pval) %&gt;%
+      mutate(sig = padj &lt; 0.05)
+  })
+
+fgsea_res$`Female 2v3` %&lt;&gt;% mutate(coef = &quot;Female 2v3&quot;)
+fgsea_res$`Male 2v3` %&lt;&gt;% mutate(coef = &quot;Male 2v3&quot;)
+fgsea_res$`Female 4v3` %&lt;&gt;% mutate(coef = &quot;Female 4v3&quot;)
+fgsea_res$`Male 4v3` %&lt;&gt;% mutate(coef = &quot;Male 4v3&quot;)
+
+
+# harmonic mean 
+HMP &lt;- 
+  fryRes %&gt;% 
+  bind_rows() %&gt;% 
+  dplyr::select(geneset, PValue, coef) %&gt;% 
+  dplyr::rename(fry_p = PValue) %&gt;% 
+  left_join(camera_res %&gt;% 
+              bind_rows() %&gt;% 
+              dplyr::select(geneset, PValue, coef), 
+            by = c(&quot;geneset&quot;, &quot;coef&quot;)) %&gt;% 
+  dplyr::rename(camera_p = PValue) %&gt;% 
+  left_join(fgsea_res %&gt;% 
+              bind_rows() %&gt;% 
+              dplyr::select(geneset, pval, coef), 
+            by = c(&quot;geneset&quot;, &quot;coef&quot;)) %&gt;% 
+  dplyr::rename(fgsea_p = pval) %&gt;% 
+  bind_rows() %&gt;% 
+  nest(p = one_of(c(&quot;fry_p&quot;, &quot;camera_p&quot;, &quot;fgsea_p&quot;))) %&gt;% 
+  mutate(
+    harmonic_p = vapply(p, function(x){
+      x &lt;- unlist(x)
+      x &lt;- x[!is.na(x)]
+      p.hmp(x, L = 3)
+    }, numeric(1))
+  ) %&gt;% 
+  unnest() %&gt;% 
+  mutate(harmonic_p_FDR = p.adjust(harmonic_p, &quot;fdr&quot;), 
+         sig = harmonic_p_FDR &lt; 0.05) %&gt;% 
+  arrange(harmonic_p_FDR)</code></pre>
+</div>
+<div id="vis-2" class="section level2">
+<h2>vis</h2>
+<div id="number-of-gene-sets" class="section level3">
+<h3>Number of gene sets</h3>
+<pre class="r"><code>HMP %&gt;% 
+  dplyr::filter(harmonic_p_FDR &lt; 0.01) %&gt;% #group_by(coef) %&gt;% summarise(n = n())
+  ggplot(aes(coef)) +
+  geom_bar() +
+  theme_bw()</code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-23-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>HMP %&gt;% 
+  mutate(Sex = case_when(
+    grepl(coef, pattern = &quot;Male&quot;) ~ &quot;male&quot;, 
+    grepl(coef, pattern = &quot;Female&quot;) ~ &quot;female&quot;, 
+  ), 
+  comparison = case_when(
+    grepl(coef, pattern = &quot;4v3&quot;) ~ &quot;APOE4 v APOE3&quot;, 
+    grepl(coef, pattern = &quot;2v3&quot;) ~ &quot;APOE2 v APOE3&quot;, 
+  )) %&gt;% 
+  dplyr::filter(harmonic_p_FDR &lt; 0.01) %&gt;% 
+  ggplot(aes(y= reorder(geneset, -harmonic_p), 
+             x = coef, 
+             fill= -log10(harmonic_p))) +
+  geom_tile(colour = &quot;black&quot;) +
+  theme_bw() +
+  facet_wrap(~Sex+comparison, scales = &quot;free&quot;) +
+  scale_fill_viridis_c() +
+  easy_rotate_x_labels(angle = -45) +
+  labs(x = &quot;&quot;, 
+       y = &quot;Gene set&quot;) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) </code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-24-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>  #ggsave(&quot;plotsforpub/HMP.png&quot;, width = 21.5, height = 10, units = &quot;cm&quot;, dpi = 600, scale = 2)</code></pre>
+</div>
+</div>
+<div id="upset-de-genes" class="section level2">
+<h2>upset DE genes</h2>
+<pre class="r"><code>upset4v3male &lt;- c(KEGG, ireGenes) %&gt;% 
+  .[c(HMP %&gt;%
+        dplyr::filter(coef == &quot;Male 4v3&quot; &amp; harmonic_p_FDR &lt; 0.01) %&gt;%
+        .$geneset)] %&gt;% 
+  lapply(function(x) {
+    x %&gt;% 
+      intersect(toptables_cqn$`Male 4v3` %&gt;% 
+                  dplyr::filter(DE == TRUE) %&gt;% 
+                  .$gene_id)
+  }) %&gt;% 
+  fromList() %&gt;% 
+  upset(nsets = length(.), 
+        order.by = &quot;freq&quot;
+  )
+
+# convert to cowplot 
+upset4v3male_cow &lt;- cowplot::plot_grid(NULL, upset4v3male$Main_bar, 
+                                   upset4v3male$Sizes, upset4v3male$Matrix,
+                            nrow=2, align=&#39;hv&#39;, rel_heights = c(1,1),
+                           rel_widths = c(1,2))
+
+## female 4v3
+upset4v3female &lt;- c(KEGG, ireGenes) %&gt;% 
+  .[c(HMP %&gt;%
+        dplyr::filter(coef == &quot;Female 4v3&quot; &amp; harmonic_p_FDR &lt; 0.01) %&gt;%
+        .$geneset)] %&gt;% 
+  lapply(function(x) {
+    x %&gt;% 
+      intersect(toptables_cqn$`Female 4v3` %&gt;% 
+                  dplyr::filter(DE == TRUE) %&gt;% 
+                  .$gene_id)
+  }) %&gt;% 
+  fromList() %&gt;% 
+  upset(nsets = length(.), 
+        order.by = &quot;freq&quot;
+  )
+
+# convert to cowplot 
+upset4v3fem_cow &lt;- cowplot::plot_grid(NULL, upset4v3female$Main_bar, 
+                                      upset4v3female$Sizes, 
+                                      upset4v3female$Matrix,
+                                      nrow=2, align=&#39;hv&#39;, rel_heights = c(1,1),
+                                      rel_widths = c(1,2))
+
+## female 2v3
+upset2v3female &lt;- c(KEGG, ireGenes) %&gt;% 
+  .[c(HMP %&gt;%
+        dplyr::filter(coef == &quot;Female 2v3&quot; &amp; harmonic_p_FDR &lt; 0.01) %&gt;%
+        .$geneset)] %&gt;% 
+  lapply(function(x) {
+    x %&gt;% 
+      intersect(toptables_cqn$`Female 2v3` %&gt;% 
+                  dplyr::filter(DE == TRUE) %&gt;% 
+                  .$gene_id)
+  }) %&gt;% 
+  fromList() %&gt;% 
+  upset(nsets = length(.), 
+        order.by = &quot;freq&quot;
+  )
+
+# convert to cowplot 
+upset2v3fem_cow &lt;- cowplot::plot_grid(NULL, upset2v3female$Main_bar, 
+                                      upset2v3female$Sizes, 
+                                      upset2v3female$Matrix,
+                                      nrow=2, align=&#39;hv&#39;, rel_heights = c(1,1),
+                                      rel_widths = c(1,2))
+
+upsets &lt;- grid.arrange(upset4v3male_cow) </code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-25-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>  # ggsave(upsets, filename = &quot;plotsforpub/upset_HMP_degenes.png&quot;, 
+  #        width = 18, height = 10, units = &quot;cm&quot;, dpi = 600, scale = 2)</code></pre>
+<pre class="r"><code>toptables_cqn %&gt;% 
+    bind_rows() %&gt;% 
+    mutate(rankstat = sign(logFC)*-log10(PValue)) %&gt;% 
+    ggplot(aes(x = len, y = rankstat)) +
+    geom_point(alpha = 0.5, 
+               aes(colour = DE)) +
+    coord_cartesian(ylim = c(-20, 20)) +
+    facet_wrap(~ coef, scales = &quot;free&quot;) +
+    scale_x_continuous(limits = c(10, 20000), 
+                       trans = scales::log10_trans(), ) +
+    scale_color_manual(values = c(&quot;grey50&quot;, &quot;red&quot;)) +
+    theme_bw() + 
+    labs(x = &quot;Average transcript length per gene &quot;, 
+         y = &quot;sign(logFC)*-log10(PValue)&quot;, 
+         colour = &quot;Differentially expxressed?&quot;) +
+    geom_smooth(se = F)</code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-26-1.png" width="672" style="display: block; margin: auto;" /></p>
+</div>
+</div>
+<div id="cell-type-check" class="section level1">
+<h1>cell type check</h1>
+<pre class="r"><code>cell_type_markers &lt;- read_xls(&quot;data/cell_type_genes41586_2007_BFnature05453_MOESM11_ESM.xls&quot;) %&gt;% 
+  dplyr::select(c(&quot;Neurons&quot; = &quot;Neuron-enriched&quot;), c(&quot;Astrocytes&quot; = &quot;Astrocyte-enriched&quot;), c(&quot;Oligodendrocytes&quot; = &quot;Oligodendrocyte-enriched&quot;)) %&gt;% 
+  gather(&quot;cell_type&quot;, &quot;gene_name&quot;) %&gt;% 
+  left_join(x_zhaoetal$genes %&gt;% 
+              as.data.frame %&gt;% 
+              rownames_to_column(&quot;gene_id&quot;) %&gt;% 
+              dplyr::select(gene_name, gene_id)) %&gt;% 
+  na.omit %&gt;% 
+  dplyr::select(-gene_name) %&gt;% 
+  split(f = .$cell_type) %&gt;% 
+  lapply(function(x) {
+    dplyr::select(x, &quot;gene_id&quot;) %&gt;% 
+      .$gene_id
+  })
+
+cell_type_markers$Microglia &lt;-  read_excel(&quot;data/microglia_oosterofetal.xlsx&quot;,
+                                           sheet = 1) %&gt;%
+  .$Mouse.Ensembl.Gene.ID
+ggarrange(
+  colnames(contrasts) %&gt;% 
+    sapply(function(x){
+      logCPM_zhaeoetal %&gt;% 
+        fry(index = cell_type_markers,
+            design = design,
+            contrast= contrasts[,x],
+            #sort = &quot;directional&quot;
+        ) %&gt;% 
+        as.data.frame() %&gt;% 
+        rownames_to_column(&quot;geneset&quot;) %&gt;% 
+        as_tibble() %&gt;% 
+        mutate(pbonf = p.adjust(PValue, &quot;bonferroni&quot;), 
+               coef = x)
+    }, simplify = FALSE
+    ) %&gt;% 
+    bind_rows() %&gt;% 
+    ggplot(aes(x = -log10(PValue), y = geneset)) +
+    geom_col(aes(fill = FDR &lt; 0.05)) +
+    facet_wrap(~coef, nrow = 1) +
+    theme_bw() +
+    scale_fill_manual(values = c(&quot;grey50&quot;, &quot;red&quot;)),
+  
+
+
+ggarrange(
+x_zhaoetal %&gt;% 
+  cpm(log=TRUE) %&gt;%
+  as.data.frame() %&gt;%
+  rownames_to_column(&quot;gene_id&quot;) %&gt;%
+  dplyr::filter(gene_id %in% cell_type_markers$Neurons) %&gt;%
+  gather(key = &quot;sample&quot;, value = &quot;logCPM&quot;, colnames(x_zhaoetal)) %&gt;%
+  left_join(x_zhaoetal$samples) %&gt;% 
+  ggplot(aes(x = Genotype, y = logCPM)) +
+  geom_violin(trim = FALSE,
+    aes(fill = Genotype),
+    alpha = 0.75) +
+  facet_wrap(~Sex) +
+  geom_boxplot(width = .4) +
+  stat_summary(geom = &quot;point&quot;, shape = 23, fill = &quot;red&quot;, size = 3) +
+  theme_bw() +
+  labs(x = &quot;&quot;,
+       fill = &quot;Genotype&quot;) +
+  ggtitle(&quot;Neurons&quot;) +
+  scale_fill_viridis_d(),
+
+x_zhaoetal %&gt;% 
+  cpm(log=TRUE) %&gt;%
+  as.data.frame() %&gt;%
+  rownames_to_column(&quot;gene_id&quot;) %&gt;%
+  dplyr::filter(gene_id %in% cell_type_markers$Astrocytes) %&gt;%
+  gather(key = &quot;sample&quot;, value = &quot;logCPM&quot;, colnames(x_zhaoetal)) %&gt;%
+  left_join(x_zhaoetal$samples) %&gt;%
+  ggplot(aes(x = Genotype, y = logCPM)) +
+  geom_violin(trim = FALSE,
+    aes(fill = Genotype),
+    alpha = 0.75) +
+  facet_wrap(~Sex) +
+  geom_boxplot(width = .4) +
+  stat_summary(geom = &quot;point&quot;, shape = 23, fill = &quot;red&quot;, size = 3) +
+  theme_bw() +
+  labs(x = &quot;&quot;,
+       fill = &quot;Genotype&quot;) +
+  ggtitle(&quot;Astrocytes&quot;) +
+  scale_fill_viridis_d(),
+
+x_zhaoetal %&gt;% 
+  cpm(log=TRUE) %&gt;%
+  as.data.frame() %&gt;%
+  rownames_to_column(&quot;gene_id&quot;) %&gt;%
+  dplyr::filter(gene_id %in% cell_type_markers$Oligodendrocytes) %&gt;%
+  gather(key = &quot;sample&quot;, value = &quot;logCPM&quot;, colnames(x_zhaoetal)) %&gt;%
+  left_join(x_zhaoetal$samples) %&gt;%
+  ggplot(aes(x = Genotype, y = logCPM)) +
+  geom_violin(trim = FALSE,
+    aes(fill = Genotype),
+    alpha = 0.75) +
+  facet_wrap(~Sex) +
+  geom_boxplot(width = .4) +
+  stat_summary(geom = &quot;point&quot;, shape = 23, fill = &quot;red&quot;, size =3) +
+  theme_bw() +
+  labs(x = &quot;&quot;,
+       fill = &quot;Genotype&quot;) +
+  ggtitle(&quot;Oligodendrocytes&quot;) +
+  scale_fill_viridis_d(),
+
+x_zhaoetal %&gt;% 
+  cpm(log=TRUE) %&gt;%
+  as.data.frame() %&gt;%
+  rownames_to_column(&quot;gene_id&quot;) %&gt;%
+  dplyr::filter(gene_id %in% cell_type_markers$Microglia) %&gt;%
+  gather(key = &quot;sample&quot;, value = &quot;logCPM&quot;, colnames(x_zhaoetal)) %&gt;%
+  left_join(x_zhaoetal$samples) %&gt;%
+  ggplot(aes(x = Genotype, y = logCPM)) +
+  geom_violin(trim = FALSE,
+    aes(fill = Genotype),
+    alpha = 0.75) +
+  facet_wrap(~Sex) +
+  geom_boxplot(width = .4) +
+  stat_summary(geom = &quot;point&quot;, shape = 23, fill = &quot;red&quot;, size = 3) +
+  theme_bw() +
+  labs(x = &quot;&quot;,
+       fill = &quot;Genotype&quot;) +
+  ggtitle(&quot;Microglia&quot;) +
+  scale_fill_viridis_d(),
+common.legend = TRUE
+), 
+common.legend = FALSE,
+heights = c(1,4), 
+ncol = 1, 
+labels = &quot;AUTO&quot;
+) </code></pre>
+<p><img src="figure/APOE-TR_3m_12m.Rmd/unnamed-chunk-27-1.png" width="672" style="display: block; margin: auto;" /></p>
+<pre class="r"><code>  # ggsave(&quot;plotsforpub/celltype.png&quot;)</code></pre>
+<!-- ## data export -->
+<!-- ```{r} -->
+<!-- saveRDS(x_zhaoetal, "R_objects/apoe_zhaoetal_dge.rds") -->
+<!-- saveRDS(toptables_cqn, "R_objects/apoe_zhaoetal_toptablescqn.rds") -->
+<!-- saveRDS(HMP, "R_objects/apoe_zhaoetal_HMP.rds") -->
+<!-- ``` -->
+</div>
+<div id="session-info" class="section level1">
+<h1>Session info</h1>
+<pre class="r"><code>sessionInfo() %&gt;% pander()</code></pre>
+<p><strong>R version 4.0.2 (2020-06-22)</strong></p>
+<p><strong>Platform:</strong> x86_64-apple-darwin17.0 (64-bit)</p>
+<p><strong>locale:</strong> en_AU.UTF-8||en_AU.UTF-8||en_AU.UTF-8||C||en_AU.UTF-8||en_AU.UTF-8</p>
+<p><strong>attached base packages:</strong> <em>stats4</em>, <em>parallel</em>, <em>grid</em>, <em>splines</em>, <em>stats</em>, <em>graphics</em>, <em>grDevices</em>, <em>utils</em>, <em>datasets</em>, <em>methods</em> and <em>base</em></p>
+<p><strong>other attached packages:</strong> <em>ggsci(v.2.9)</em>, <em>pathview(v.1.28.1)</em>, <em>ggeasy(v.0.1.2)</em>, <em>cowplot(v.1.1.0)</em>, <em>RColorBrewer(v.1.1-2)</em>, <em>rtracklayer(v.1.48.0)</em>, <em>pander(v.0.6.3)</em>, <em>kableExtra(v.1.3.1)</em>, <em>UpSetR(v.1.4.0)</em>, <em>pheatmap(v.1.0.12)</em>, <em>ggpubr(v.0.4.0)</em>, <em>msigdbr(v.7.2.1)</em>, <em>ensembldb(v.2.12.1)</em>, <em>AnnotationFilter(v.1.12.0)</em>, <em>GenomicFeatures(v.1.40.1)</em>, <em>AnnotationDbi(v.1.50.3)</em>, <em>Biobase(v.2.48.0)</em>, <em>GenomicRanges(v.1.40.0)</em>, <em>GenomeInfoDb(v.1.24.2)</em>, <em>IRanges(v.2.22.2)</em>, <em>S4Vectors(v.0.26.1)</em>, <em>AnnotationHub(v.2.20.2)</em>, <em>BiocFileCache(v.1.12.1)</em>, <em>dbplyr(v.2.0.0)</em>, <em>BiocGenerics(v.0.34.0)</em>, <em>gridExtra(v.2.3)</em>, <em>readxl(v.1.3.1)</em>, <em>harmonicmeanp(v.3.0)</em>, <em>FMStable(v.0.1-2)</em>, <em>scales(v.1.1.1)</em>, <em>cqn(v.1.34.0)</em>, <em>quantreg(v.5.75)</em>, <em>SparseM(v.1.78)</em>, <em>preprocessCore(v.1.50.0)</em>, <em>nor1mix(v.1.3-0)</em>, <em>mclust(v.5.4.7)</em>, <em>goseq(v.1.40.0)</em>, <em>geneLenDataBase(v.1.24.0)</em>, <em>BiasedUrn(v.1.07)</em>, <em>ggrepel(v.0.8.2)</em>, <em>ggfortify(v.0.4.11)</em>, <em>fgsea(v.1.14.0)</em>, <em>edgeR(v.3.30.3)</em>, <em>limma(v.3.44.3)</em>, <em>magrittr(v.2.0.1)</em>, <em>forcats(v.0.5.0)</em>, <em>stringr(v.1.4.0)</em>, <em>dplyr(v.1.0.2)</em>, <em>purrr(v.0.3.4)</em>, <em>readr(v.1.4.0)</em>, <em>tidyr(v.1.1.2)</em>, <em>tibble(v.3.0.4)</em>, <em>ggplot2(v.3.3.2)</em>, <em>tidyverse(v.1.3.0)</em> and <em>workflowr(v.1.6.2)</em></p>
+<p><strong>loaded via a namespace (and not attached):</strong> <em>tidyselect(v.1.1.0)</em>, <em>RSQLite(v.2.2.1)</em>, <em>BiocParallel(v.1.22.0)</em>, <em>munsell(v.0.5.0)</em>, <em>statmod(v.1.4.35)</em>, <em>withr(v.2.3.0)</em>, <em>colorspace(v.2.0-0)</em>, <em>highr(v.0.8)</em>, <em>knitr(v.1.30)</em>, <em>rstudioapi(v.0.13)</em>, <em>ggsignif(v.0.6.0)</em>, <em>labeling(v.0.4.2)</em>, <em>KEGGgraph(v.1.48.0)</em>, <em>git2r(v.0.27.1)</em>, <em>GenomeInfoDbData(v.1.2.3)</em>, <em>farver(v.2.0.3)</em>, <em>bit64(v.4.0.5)</em>, <em>rprojroot(v.2.0.2)</em>, <em>vctrs(v.0.3.5)</em>, <em>generics(v.0.1.0)</em>, <em>xfun(v.0.19)</em>, <em>R6(v.2.5.0)</em>, <em>locfit(v.1.5-9.4)</em>, <em>bitops(v.1.0-6)</em>, <em>DelayedArray(v.0.14.1)</em>, <em>assertthat(v.0.2.1)</em>, <em>promises(v.1.1.1)</em>, <em>gtable(v.0.3.0)</em>, <em>conquer(v.1.0.2)</em>, <em>rlang(v.0.4.9)</em>, <em>MatrixModels(v.0.4-1)</em>, <em>rstatix(v.0.6.0)</em>, <em>lazyeval(v.0.2.2)</em>, <em>broom(v.0.7.2)</em>, <em>BiocManager(v.1.30.10)</em>, <em>yaml(v.2.2.1)</em>, <em>abind(v.1.4-5)</em>, <em>modelr(v.0.1.8)</em>, <em>backports(v.1.2.0)</em>, <em>httpuv(v.1.5.4)</em>, <em>tools(v.4.0.2)</em>, <em>ellipsis(v.0.3.1)</em>, <em>Rcpp(v.1.0.5)</em>, <em>plyr(v.1.8.6)</em>, <em>progress(v.1.2.2)</em>, <em>zlibbioc(v.1.34.0)</em>, <em>RCurl(v.1.98-1.2)</em>, <em>prettyunits(v.1.1.1)</em>, <em>openssl(v.1.4.3)</em>, <em>SummarizedExperiment(v.1.18.2)</em>, <em>haven(v.2.3.1)</em>, <em>fs(v.1.5.0)</em>, <em>data.table(v.1.13.2)</em>, <em>openxlsx(v.4.2.3)</em>, <em>reprex(v.0.3.0)</em>, <em>whisker(v.0.4)</em>, <em>ProtGenerics(v.1.20.0)</em>, <em>matrixStats(v.0.57.0)</em>, <em>hms(v.0.5.3)</em>, <em>mime(v.0.9)</em>, <em>evaluate(v.0.14)</em>, <em>xtable(v.1.8-4)</em>, <em>XML(v.3.99-0.5)</em>, <em>rio(v.0.5.16)</em>, <em>compiler(v.4.0.2)</em>, <em>biomaRt(v.2.44.4)</em>, <em>crayon(v.1.3.4)</em>, <em>htmltools(v.0.5.0)</em>, <em>mgcv(v.1.8-33)</em>, <em>later(v.1.1.0.1)</em>, <em>lubridate(v.1.7.9.2)</em>, <em>DBI(v.1.1.0)</em>, <em>rappdirs(v.0.3.1)</em>, <em>Matrix(v.1.2-18)</em>, <em>car(v.3.0-10)</em>, <em>cli(v.2.2.0)</em>, <em>pkgconfig(v.2.0.3)</em>, <em>GenomicAlignments(v.1.24.0)</em>, <em>foreign(v.0.8-80)</em>, <em>xml2(v.1.3.2)</em>, <em>webshot(v.0.5.2)</em>, <em>XVector(v.0.28.0)</em>, <em>rvest(v.0.3.6)</em>, <em>digest(v.0.6.27)</em>, <em>graph(v.1.66.0)</em>, <em>Biostrings(v.2.56.0)</em>, <em>rmarkdown(v.2.5)</em>, <em>cellranger(v.1.1.0)</em>, <em>fastmatch(v.1.1-0)</em>, <em>curl(v.4.3)</em>, <em>shiny(v.1.5.0)</em>, <em>Rsamtools(v.2.4.0)</em>, <em>lifecycle(v.0.2.0)</em>, <em>nlme(v.3.1-150)</em>, <em>jsonlite(v.1.7.1)</em>, <em>carData(v.3.0-4)</em>, <em>viridisLite(v.0.3.0)</em>, <em>askpass(v.1.1)</em>, <em>fansi(v.0.4.1)</em>, <em>pillar(v.1.4.7)</em>, <em>lattice(v.0.20-41)</em>, <em>KEGGREST(v.1.28.0)</em>, <em>fastmap(v.1.0.1)</em>, <em>httr(v.1.4.2)</em>, <em>GO.db(v.3.11.4)</em>, <em>interactiveDisplayBase(v.1.26.3)</em>, <em>glue(v.1.4.2)</em>, <em>zip(v.2.1.1)</em>, <em>png(v.0.1-7)</em>, <em>Rgraphviz(v.2.32.0)</em>, <em>BiocVersion(v.3.11.1)</em>, <em>bit(v.4.0.4)</em>, <em>stringi(v.1.5.3)</em>, <em>blob(v.1.2.1)</em>, <em>org.Hs.eg.db(v.3.11.4)</em> and <em>memoise(v.1.1.0)</em></p>
+<br>
+<p>
+<button type="button" class="btn btn-default btn-workflowr btn-workflowr-sessioninfo" data-toggle="collapse" data-target="#workflowr-sessioninfo" style="display: block;">
+<span class="glyphicon glyphicon-wrench" aria-hidden="true"></span> Session information
+</button>
+</p>
+<div id="workflowr-sessioninfo" class="collapse">
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>R version 4.0.2 (2020-06-22)
+Platform: x86_64-apple-darwin17.0 (64-bit)
+Running under: macOS Mojave 10.14.3
+
+Matrix products: default
+BLAS:   /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRblas.dylib
+LAPACK: /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRlapack.dylib
+
+locale:
+[1] en_AU.UTF-8/en_AU.UTF-8/en_AU.UTF-8/C/en_AU.UTF-8/en_AU.UTF-8
+
+attached base packages:
+ [1] stats4    parallel  grid      splines   stats     graphics  grDevices
+ [8] utils     datasets  methods   base     
+
+other attached packages:
+ [1] ggsci_2.9               pathview_1.28.1         ggeasy_0.1.2           
+ [4] cowplot_1.1.0           RColorBrewer_1.1-2      rtracklayer_1.48.0     
+ [7] pander_0.6.3            kableExtra_1.3.1        UpSetR_1.4.0           
+[10] pheatmap_1.0.12         ggpubr_0.4.0            msigdbr_7.2.1          
+[13] ensembldb_2.12.1        AnnotationFilter_1.12.0 GenomicFeatures_1.40.1 
+[16] AnnotationDbi_1.50.3    Biobase_2.48.0          GenomicRanges_1.40.0   
+[19] GenomeInfoDb_1.24.2     IRanges_2.22.2          S4Vectors_0.26.1       
+[22] AnnotationHub_2.20.2    BiocFileCache_1.12.1    dbplyr_2.0.0           
+[25] BiocGenerics_0.34.0     gridExtra_2.3           readxl_1.3.1           
+[28] harmonicmeanp_3.0       FMStable_0.1-2          scales_1.1.1           
+[31] cqn_1.34.0              quantreg_5.75           SparseM_1.78           
+[34] preprocessCore_1.50.0   nor1mix_1.3-0           mclust_5.4.7           
+[37] goseq_1.40.0            geneLenDataBase_1.24.0  BiasedUrn_1.07         
+[40] ggrepel_0.8.2           ggfortify_0.4.11        fgsea_1.14.0           
+[43] edgeR_3.30.3            limma_3.44.3            magrittr_2.0.1         
+[46] forcats_0.5.0           stringr_1.4.0           dplyr_1.0.2            
+[49] purrr_0.3.4             readr_1.4.0             tidyr_1.1.2            
+[52] tibble_3.0.4            ggplot2_3.3.2           tidyverse_1.3.0        
+[55] workflowr_1.6.2        
+
+loaded via a namespace (and not attached):
+  [1] tidyselect_1.1.0              RSQLite_2.2.1                
+  [3] BiocParallel_1.22.0           munsell_0.5.0                
+  [5] statmod_1.4.35                withr_2.3.0                  
+  [7] colorspace_2.0-0              highr_0.8                    
+  [9] knitr_1.30                    rstudioapi_0.13              
+ [11] ggsignif_0.6.0                labeling_0.4.2               
+ [13] KEGGgraph_1.48.0              git2r_0.27.1                 
+ [15] GenomeInfoDbData_1.2.3        farver_2.0.3                 
+ [17] bit64_4.0.5                   rprojroot_2.0.2              
+ [19] vctrs_0.3.5                   generics_0.1.0               
+ [21] xfun_0.19                     R6_2.5.0                     
+ [23] locfit_1.5-9.4                bitops_1.0-6                 
+ [25] DelayedArray_0.14.1           assertthat_0.2.1             
+ [27] promises_1.1.1                gtable_0.3.0                 
+ [29] conquer_1.0.2                 rlang_0.4.9                  
+ [31] MatrixModels_0.4-1            rstatix_0.6.0                
+ [33] lazyeval_0.2.2                broom_0.7.2                  
+ [35] BiocManager_1.30.10           yaml_2.2.1                   
+ [37] abind_1.4-5                   modelr_0.1.8                 
+ [39] backports_1.2.0               httpuv_1.5.4                 
+ [41] tools_4.0.2                   ellipsis_0.3.1               
+ [43] Rcpp_1.0.5                    plyr_1.8.6                   
+ [45] progress_1.2.2                zlibbioc_1.34.0              
+ [47] RCurl_1.98-1.2                prettyunits_1.1.1            
+ [49] openssl_1.4.3                 SummarizedExperiment_1.18.2  
+ [51] haven_2.3.1                   fs_1.5.0                     
+ [53] data.table_1.13.2             openxlsx_4.2.3               
+ [55] reprex_0.3.0                  whisker_0.4                  
+ [57] ProtGenerics_1.20.0           matrixStats_0.57.0           
+ [59] hms_0.5.3                     mime_0.9                     
+ [61] evaluate_0.14                 xtable_1.8-4                 
+ [63] XML_3.99-0.5                  rio_0.5.16                   
+ [65] compiler_4.0.2                biomaRt_2.44.4               
+ [67] crayon_1.3.4                  htmltools_0.5.0              
+ [69] mgcv_1.8-33                   later_1.1.0.1                
+ [71] lubridate_1.7.9.2             DBI_1.1.0                    
+ [73] rappdirs_0.3.1                Matrix_1.2-18                
+ [75] car_3.0-10                    cli_2.2.0                    
+ [77] pkgconfig_2.0.3               GenomicAlignments_1.24.0     
+ [79] foreign_0.8-80                xml2_1.3.2                   
+ [81] webshot_0.5.2                 XVector_0.28.0               
+ [83] rvest_0.3.6                   digest_0.6.27                
+ [85] graph_1.66.0                  Biostrings_2.56.0            
+ [87] rmarkdown_2.5                 cellranger_1.1.0             
+ [89] fastmatch_1.1-0               curl_4.3                     
+ [91] shiny_1.5.0                   Rsamtools_2.4.0              
+ [93] lifecycle_0.2.0               nlme_3.1-150                 
+ [95] jsonlite_1.7.1                carData_3.0-4                
+ [97] viridisLite_0.3.0             askpass_1.1                  
+ [99] fansi_0.4.1                   pillar_1.4.7                 
+[101] lattice_0.20-41               KEGGREST_1.28.0              
+[103] fastmap_1.0.1                 httr_1.4.2                   
+[105] GO.db_3.11.4                  interactiveDisplayBase_1.26.3
+[107] glue_1.4.2                    zip_2.1.1                    
+[109] png_0.1-7                     Rgraphviz_2.32.0             
+[111] BiocVersion_3.11.1            bit_4.0.4                    
+[113] stringi_1.5.3                 blob_1.2.1                   
+[115] org.Hs.eg.db_3.11.4           memoise_1.1.0                </code></pre>
+</div>
+</div>
+
+
+<!-- Adjust MathJax settings so that all math formulae are shown using
+TeX fonts only; see
+http://docs.mathjax.org/en/latest/configuration.html.  This will make
+the presentation more consistent at the cost of the webpage sometimes
+taking slightly longer to load. Note that this only works because the
+footer is added to webpages before the MathJax javascript. -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    "HTML-CSS": { availableFonts: ["TeX"] }
+  });
+</script>
+
+
+</div>
+</div>
+
+</div>
+
+<script>
+
+// add bootstrap table styles to pandoc tables
+function bootstrapStylePandocTables() {
+  $('tr.odd').parent('tbody').parent('table').addClass('table table-condensed');
+}
+$(document).ready(function () {
+  bootstrapStylePandocTables();
+});
+
+
+</script>
+
+<!-- tabsets -->
+
+<script>
+$(document).ready(function () {
+  window.buildTabsets("TOC");
+});
+
+$(document).ready(function () {
+  $('.tabset-dropdown > .nav-tabs > li').click(function () {
+    $(this).parent().toggleClass('nav-tabs-open')
+  });
+});
+</script>
+
+<!-- code folding -->
+
+<script>
+$(document).ready(function ()  {
+
+    // move toc-ignore selectors from section div to header
+    $('div.section.toc-ignore')
+        .removeClass('toc-ignore')
+        .children('h1,h2,h3,h4,h5').addClass('toc-ignore');
+
+    // establish options
+    var options = {
+      selectors: "h1,h2,h3",
+      theme: "bootstrap3",
+      context: '.toc-content',
+      hashGenerator: function (text) {
+        return text.replace(/[.\\/?&!#<>]/g, '').replace(/\s/g, '_');
+      },
+      ignoreSelector: ".toc-ignore",
+      scrollTo: 0
+    };
+    options.showAndHide = true;
+    options.smoothScroll = true;
+
+    // tocify
+    var toc = $("#TOC").tocify(options).data("toc-tocify");
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

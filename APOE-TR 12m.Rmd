@@ -1557,7 +1557,8 @@ c(toptables_cqn %>%
 ) %>% 
   fromList() %>% 
   upset(nsets = length(.), 
-        order.by = "freq")
+        #order.by = "freq"
+        )
 ```
 
 <!-- ## data export -->
