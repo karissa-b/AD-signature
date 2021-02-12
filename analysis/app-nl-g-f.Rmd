@@ -1,0 +1,1663 @@
+---
+title: "App NL-G-F 12m microarray"
+author: "Karissa"
+date: "12/02/2021"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, error = FALSE )
+```
+
+# setup
+```{r}
+library(tidyverse)
+library(magrittr)
+
+library(limma)
+library(GEOquery)
+library(affy)
+library(kableExtra)
+library(ggfortify)
+library(ggeasy)
+library(mogene20stprobeset.db)
+library(mogene20sttranscriptcluster.db)
+library(oligo)
+library(msigdbr)
+library(readxl)
+library(pheatmap)
+library(RColorBrewer)
+library(viridis)
+library(UpSetR)
+library(fgsea)
+library(harmonicmeanp)
+library(ggpubr)
+library(ggpol)
+library(cowplot)
+library(gridExtra)
+library(lattice)
+library(grid)
+library(arrayQualityMetrics)
+library(factoextra)
+library(cluster) 
+
+# This code loads the flat violin function in the working environment
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+```
+
+# Introduction
+
+This document will contain my analysis of the microarray data of 12-months old male mice from two mouse models:
+AppNL-G-F/NL-G-F mice, harboring three pathogenic App-knock-in mutations that promote aggressive amyloidosis by increasing total Aβ production (Swedish mutation KM670/671NL), increasing the Aβ42/Aβ40 ratio (Iberian mutation I716F), and promoting Aβ aggregation through facilitating oligomerization and reducing proteolytic degradation (Arctic mutation E693G), under the control of the endogenous APP promoter \n \n
+
+3xTg-AD-H mouse carrying two mutated human overexpressed transgenes, APP (Swedish KM670/671NL) and MAPT (P301L), driven by exogenous Thy1.2 promoter with a knock-in mutation of Psen1 (M146V), together with their correspondent controls (male, n=3 for each group). 
+
+It does not appear to be littermate controls. 
+
+Summary of samples:
+```{r}
+geo <- getGEO(filename="data/AppNL-G-F.microarray/GSE92926_series_matrix.txt") %>%
+  pData()
+
+geo %>%
+  dplyr::select(`genotype:ch1`, `age:ch1`, `tissue:ch1`, supplementary_file) %>%
+  kable(caption = "summary of samples") %>%
+  kable_styling()
+```
+
+## import data 
+
+First I will obtain the expression data. Since this array is a MoGene T array, I will use the `oligo` package will be used to import the expression values from the *.CEL* files .
+
+```{r}
+exp.cel <- 
+  list.files("data/AppNL-G-F.microarray/celFiles", 
+                      pattern = ".CEL", full.names = TRUE) %>% 
+  read.celfiles()
+  
+
+# tidy ip column names
+colnames(exp.cel) %<>%
+  str_remove("^GSM24404[:digit:]+_") %>%
+  str_remove("_MoGene-2_0-st_.CEL") %>%
+  str_remove("_MoGene-2_0-st.CEL")
+
+targets <- colnames(exp.cel) %>% 
+  as_tibble() %>% 
+  set_colnames("sample") %>% 
+  mutate(Genotype = case_when(
+    grepl(sample, pattern = "APPNL") ~ "APP_NLGF", 
+    grepl(sample, pattern = "APPWT") ~ "APP_WT", 
+    grepl(sample, pattern = "3xTg") ~ "AD3xTg",
+    grepl(sample, pattern = "non-Tg") ~ "Non_Tg") %>% 
+      as.factor(), 
+    Genotype = factor(Genotype, 
+                      levels = c("APP_WT", "APP_NLGF", "Non_Tg", "AD3xTg"))
+    )
+
+pData(exp.cel) %<>% 
+  as.data.frame() %>% 
+  rownames_to_column("sample") %>% 
+  left_join(targets) %>% 
+  column_to_rownames("sample") 
+```
+
+# Qualtiy control of the raw data
+
+## PCA plot
+First I will perform principal component analysis on the raw data. Here we check for outliers and try to see whether the data clusters as expected, e.g. by the experimental conditions. in this plot of PC1 against PC2, samples do not overly seperate by genotype.
+```{r}
+pca_raw <- log2(exprs(exp.cel)) %>%
+  t() %>%
+  prcomp() %>%
+  autoplot(data = tibble(sample = rownames(.$x)) %>%
+             left_join(targets),
+           colour = "Genotype",
+           size = 4) +
+  theme_bw() +
+  theme(aspect.ratio = 1)
+
+pca_raw
+```
+
+## Boxplot
+
+```{r}
+exprs(exp.cel) %>%
+  log2() %>%
+    as.data.frame() %>%
+    rownames_to_column("probeID") %>%
+    gather(key = "sample", value = "expression",
+           targets$sample) %>%
+    left_join(pData(exp.cel) %>%
+                as.data.frame() %>%
+                rownames_to_column("sample")) %>%
+    ggplot(aes(x = sample, y = expression)) +
+    geom_boxplot(aes(fill = Genotype), width = 0.2) +
+    geom_flat_violin(aes(fill = Genotype),
+                     colour = NA,
+                     position = position_nudge(x = .2)) +
+    #ggtitle("Boxplot of expression values") +
+    theme_bw() +
+    easy_rotate_x_labels(angle = 315)
+```
+
+## array quality metrics
+
+Next I will use the `arrayQualityMetrics` package for more  generate a report for assistance in detecting outliers.  It will generate an additional control file containing the quality control plots together with a description of their aims and an identification of possible outliers. Inspection of this document did not reveal any outliers to be remvoed. This was only run on the first time, as it takes a long time to compile. 
+
+<!-- ```{r} -->
+<!-- arrayQualityMetrics( -->
+<!--   expressionset = exp.cel, -->
+<!--   force = TRUE, -->
+<!--   do.logtransform = TRUE, -->
+<!--   intgroup = "Genotype" -->
+<!--   ) -->
+<!-- ``` -->
+
+# Background adjustment, calibration, summarization and annotation
+
+The next step in the analysis is to perform background adjust,emt (i.e. remove background level noise), calibrate (i.e. normalise between arrays) and summarise the multiple probes per transcript to a gene level value. \n \n
+
+The package `oligo` allows us to perform background correction, normalization and summarization in one single step using a deconvolution method for background correction, quantile normalization and the `RMA` (robust multichip average) algorithm for summarization.
+
+This series of steps as a whole is commonly referred to as RMA algorithm, although strictly speaking RMA is merely a summarization method. 
+
+## Relative Log Expression data quality analysis
+
+Before calibrating and evaluating the data, we want to perform another quality control procedure, namely Relative Log Expression (RLE), To this end, we first perform an RMA without prior normalization. Then ,the RLE is performed by calculating the median log2 intensity of every transcript across all arrays. 
+
+This plot shows the deviation of expression intensity from the median expression for each microarray. If any of the boxplots from each sample have a larger extension, this indicates a high deviation from the median in a lot of transcripts, suggesting that these arrays are different from most of the others in some way. Boxes that are shifted in y-direction indicate a systematically higher or lower expression of the majority of transcripts in comparison to most of the other arrays. This could be caused by quality issues or batch effects. Therefore, if shape and median of a given box varies too much from the bulk, they should be inspected and potentially removed. Most of the boxplots appear similar, except for sample `non-Tg_3` which seem slightly increased. However , it doesnt look too bad and we only have n = 3, so will retain it. 
+
+```{r}
+eset <- oligo::rma(exp.cel, target = "core", normalize = FALSE)
+
+rowmedians <- eset %>% 
+  exprs() %>% 
+  as.matrix() %>% 
+  rowMedians()
+
+sweep(exprs(eset), 1, rowmedians) %>% 
+  as.data.frame() %>% 
+  gather(key = "sample",value = "log2_expression_deviation") %>% 
+  ggplot(aes(x = sample, y = log2_expression_deviation)) +
+  geom_boxplot(aes(fill = sample), outlier.shape = NULL) +
+  theme_bw() +
+  ggtitle("Boxplot for RLE values") +
+  easy_rotate_x_labels(angle = -90)
+```
+
+## RMA 
+
+```{r}
+eset_norm <- oligo::rma(exp.cel, target = "core")
+```
+
+# Clustering analysis
+
+## PCA on RMA normalised data
+
+After RMA normalisation, samples now mostly cluster by genotype across PC2. 
+
+```{r}
+ggarrange(
+  pca_raw +
+    ggtitle("Before RMA"), 
+  
+  exprs(eset_norm) %>% 
+    t() %>% 
+    prcomp() %>% 
+    autoplot(data = tibble(sample = rownames(.$x)) %>%
+               left_join(targets), 
+             colour = "Genotype", 
+             fill = "Genotype",
+             size = 4) +
+    theme_bw() +
+    theme(aspect.ratio = 1) +
+    ggtitle("After RMA"), 
+  nrow = 1, 
+  common.legend = TRUE
+)
+```
+
+## Clustering analysis
+
+Next, I want to see how well samples cluster based on their genotype using clustering. First, I will calculate sample:sample distances using the `dist` function. Rather than the Euclidean distance, i will use the Manhattan distance, which uses absolute distances along rectangular paths instead of squared distances of the direct path, as it is more robust. Samples do not overly cluster based on their Manhatten distance.
+
+```{r}
+dists <- exprs(eset_norm) %>% 
+  t() %>% 
+  dist(method = "manhattan") %>% 
+  as.matrix()
+
+hmcol <- viridis_pal(option = "magma")(255)
+
+diag(dists) <- NA
+
+pheatmap(dists, 
+         col = (hmcol), 
+         annotation_row = pData(eset_norm) %>% 
+           dplyr::select(Genotype),
+         legend = TRUE, 
+         treeheight_row = 0,
+         cellwidth = 10, 
+         cellheight = 10,
+         legend_breaks = c(min(dists, na.rm = TRUE), 
+                         max(dists, na.rm = TRUE)), 
+         legend_labels = (c("small distance", "large distance")),
+         main = "Clustering heatmap for the calibrated samples based on their Manhatten distance"
+         )
+```
+
+The clustering was repeated using the Euclidean distance. Samples clustered together a bit better using this method. 
+
+```{r}
+dists_eucl<- exprs(eset_norm) %>% 
+  t() %>% 
+  dist() %>% 
+  as.matrix()
+
+diag(dists_eucl) <- NA
+pheatmap(dists_eucl, 
+         col = (hmcol), 
+         annotation_row = pData(eset_norm) %>% 
+           dplyr::select(Genotype),
+         legend = TRUE, 
+         treeheight_row = 0,
+         cellwidth = 10, 
+         cellheight = 10,
+         legend_breaks = c(min(dists, na.rm = TRUE), 
+                         max(dists, na.rm = TRUE)), 
+         legend_labels = (c("small distance", "large distance")),
+         main = "Clustering heatmap for the calibrated samples based on their Euclidean distance"
+         )
+```
+
+# Filtering based on intensity
+
+Now, I will filter out lowly expressed genes. Microarray data commonly show a large number of probes in the background intensity range. These probes also do not change much across arrays. Hence they combine a low variance with a low intensity. Thus, they could end up being detected as differentially expressed although they are barely above the “detection” limit and are not very informative in general.
+
+We will perform a “soft” intensity based filtering here, since this is recommended by the `limma`  user guide. 
+
+```{r}
+medians <- rowMedians(exprs(eset_norm))
+
+hist(medians, 100, col = "cornsilk1", freq = FALSE, 
+            main = "Histogram of the median intensities", 
+            border = "antiquewhite4",
+            xlab = "Median intensities")
+```
+
+
+I will choose the threshold of 3,5 as the peak seems to stop about here. Transcripts that do not have intensities larger than the threshold in at least 3 arrays are excluded (as 3 is the number of samples in each group).
+
+```{r}
+man_threshold <- 3.5
+
+hist_res <- hist(medians, 100, col = "cornsilk", freq = FALSE, 
+            main = "Histogram of the median intensities",
+            border = "antiquewhite4",
+            xlab = "Median intensities")
+
+abline(v = man_threshold, col = "coral4", lwd = 2)
+```
+
+```{r}
+samples_cutoff <- 3
+
+idx_man_threshold <- 
+  apply(exprs(eset_norm), 1,
+        function(x){
+          sum(x > man_threshold) >= samples_cutoff})
+
+table(idx_man_threshold) %>% 
+  as_tibble() %>% 
+  set_colnames(c("Expression above threshold?", "Number of genes")) %>% 
+  kable() %>% 
+  kable_styling()
+
+exp.filtered <- subset(eset_norm, idx_man_threshold)
+```
+
+
+# Annotation of the transcript clusters
+Before we continue with the linear models for microarrays and differential expression, we first add “feature data”, i.e. annotation information to the transcript cluster identifiers stored in the featureData of our ExpressionSet. The `anno_2` object was downloaded from the thermo scientific website. 
+
+```{r}
+anno <- AnnotationDbi::select(mogene20sttranscriptcluster.db,
+                              keys = (featureNames(exp.filtered)),
+                              columns = c("SYMBOL", "GENENAME", "ENSEMBL"),
+                              keytype = "PROBEID")
+
+anno <- subset(anno, !is.na(SYMBOL))
+
+anno_2 <- 
+  read_csv("data/AppNL-G-F.microarray/MoGene-2_0-st-v1.na36.mm10.transcript.csv", skip = 23) %>% 
+   mutate(probeset_id = as.character(probeset_id))
+
+```
+
+`r anno %>% group_by(PROBEID) %>% summarise(no_of_matches = n_distinct(SYMBOL)) %>% dplyr::filter( no_of_matches > 1) %>%  nrow()`transcript-cluster identifiers map to multiple gene symbols, i.e. they can’t be unambigously assigned. For this analysis, I will just omit these genes from the analysis
+
+```{r}
+multimapppers <- anno %>% 
+  group_by(PROBEID) %>% 
+  summarise(no_of_matches = n_distinct(SYMBOL)) %>% 
+  dplyr::filter( no_of_matches > 1) %>% 
+  .$PROBEID
+
+ids_to_exlude <- (featureNames(exp.filtered) %in% multimapppers)
+
+table(ids_to_exlude)
+
+final.eset <- subset(exp.filtered, !ids_to_exlude)
+
+nonames <- exprs(exp.filtered) %>% 
+  rownames() %>% 
+  as_tibble() %>% 
+  set_colnames("PROBEID") %>% 
+  left_join(anno) %>% 
+  dplyr::filter(is.na(SYMBOL)) %>% 
+  .$PROBEID
+
+ids_to_exlude2 <- (featureNames(final.eset) %in% nonames)
+
+
+final.eset <- subset(final.eset, !ids_to_exlude2)  
+```
+
+## check sex
+
+The study claims that all mice were male in this dataset. To double check this, I will make sure that all samples express genes from the Y-chromosome. All samples express genes from the Y chromosome and therefore are all males. 
+
+```{r}
+final.eset %>% 
+  exprs() %>% 
+  as.data.frame() %>% 
+  rownames_to_column("probeset_id") %>%
+  left_join(anno_2) %>% 
+  dplyr::filter(seqname %in% c("chrX", "chrY")) %>% 
+  gather(key = "sample", value = "expression", targets$sample) %>% 
+  ggplot(aes(x = sample, y = expression)) + 
+  geom_boxplot(aes(fill = seqname)) +
+  easy_rotate_x_labels(angle = -45)
+```
+
+# PCA on final expression
+
+A final check of the overall similarity between samples, which now cluster pretty nicely by genotype. 
+
+```{r}
+exprs(final.eset) %>% 
+    t() %>% 
+    prcomp() %>% 
+    autoplot(data = tibble(sample = rownames(.$x)) %>%
+               left_join(targets), 
+             colour = "Genotype", 
+             fill = "Genotype",
+             size = 4) +
+    theme_bw() +
+    theme(aspect.ratio = 1) +
+    ggtitle("After pre-processing")
+```
+
+
+# Differential expression
+
+To test which genes are differentially expressed (DE) in the pairwise contrasts  of probes between the KI vs wt, and the Tg vs non-Tg, I will use the package `limma`. A linear model is fitted to the expression data for each gene. Empirical Bayes and other methods are used to *borrow* information across genes for the residual variance estimation leading to “moderated” t-statistics, and stabilizing the analysis for experiments with just a small number of arrays. A design matrix was generated, which tells limma which mouse belongs to which genotype. Then, a contrasts matrix is generated to define the pairwise contrasts. 
+
+Finally, the toptable is called as the final DE results. 
+
+```{r}
+design <- model.matrix(~0 + Genotype, data = pData(final.eset)) %>% 
+  set_colnames(gsub(pattern = "Genotype", replacement = "", colnames(.)))
+
+contrasts <- makeContrasts(Tg = `AD3xTg` -`Non_Tg`, 
+              KI = `APP_NLGF` - `APP_WT` ,
+              levels=design)
+
+fit <- lmFit(final.eset, design) %>% 
+  contrasts.fit(contrasts) %>% 
+  eBayes(robust = TRUE)
+
+
+toptable <- colnames(contrasts) %>% 
+  sapply(function(x){
+    topTable(fit, coef = x,
+             adjust.method = "fdr", number =  Inf) %>% 
+      as.data.frame() %>% 
+      rownames_to_column("PROBEID") %>% 
+      as_tibble() %>%
+      left_join(anno, by = ("PROBEID")) %>%
+      dplyr::select(SYMBOL, everything()) %>%
+      mutate(DE = adj.P.Val < 0.05,
+             coef = x)
+  }, simplify = FALSE)
+
+# toptable %>% 
+#   lapply(function(x) {
+#     x %>% 
+#       dplyr::filter(DE == TRUE) %>% 
+#       nrow()
+#   })
+
+```
+
+A total of `r toptable$Tg %>% dplyr::filter(DE == TRUE) %>% nrow()` genes were found to be DE in the 3xTg mice compared to controls, and `r toptable$KI %>% dplyr::filter(DE == TRUE) %>% nrow()` genes were found to be DE in the APP NLGF mice compared to controls. A few plots below summarise the DGE analysis
+
+## Visualisation
+## Venn diagram
+
+
+```{r, fig.cap="Four DE genes are shared between the Tg and KI mice"}
+
+decideTests(fit) %>% vennCounts() %>% vennDiagram()
+
+final.eset[c(intersect(toptable$KI %>% 
+                           dplyr::filter(DE == TRUE) %>% 
+                           .$PROBEID, 
+                         toptable$Tg %>% 
+                           dplyr::filter(DE == TRUE) %>% 
+                           .$PROBEID)),] %>% 
+  exprs %>% 
+  as.data.frame() %>% 
+  rownames_to_column("PROBEID") %>% 
+  left_join(anno) %>% 
+  gather("sample", "expression", targets$sample) %>% 
+  left_join(targets) %>% 
+  mutate(Genotype = factor(Genotype, levels = c("APP_WT", "APP_NLGF", "Non_Tg", "AD3xTg"))) %>% 
+  ggplot(aes(x = Genotype, y = expression)) +
+  geom_jitter() +
+  geom_boxplot(aes(colour = Genotype)) +
+  facet_wrap(~SYMBOL) +
+  theme_bw() +
+  easy_rotate_x_labels(angle = -45) +
+  scale_y_continuous(limits = c(5, 12.5)) 
+  #ggsave("plots/sharedDEgenes.png", width = 10, height = 7, units = "cm", dpi = 600, scale = 1.5)
+```
+
+<!-- ## compare with Castillo et al resutls (just for KI) -->
+
+<!-- The logFC values that I have done appear larger in magnitude than in Castillo et al. Not 100% sure why but I think the average intensity per sample was weighted by Tukeys by-weight in their study. Therefore, moderating the logFC. More than half of the DE genes I detected were detected in theres. -->
+
+<!-- ```{r} -->
+<!-- papers_de_res_nlgf <- read_excel("papers_de_res_nlgf.xlsx",  -->
+<!--     skip = 1,  -->
+<!--     col_types = c("text", "text", "text", "numeric", "text"))  -->
+
+<!-- list(`Barthelson et al.` = toptable$KI %>% -->
+<!--   dplyr::filter(adj.P.Val  < 0.05) %>%  -->
+<!--   .$SYMBOL,  -->
+<!-- `Castillo et al.` = papers_de_res_nlgf$`Gene Symbol`[-281] # the last item is not a gene name -->
+<!-- ) %>%  -->
+<!--   fromList() %>%  -->
+<!--   upset(order.by = "freq") -->
+
+<!-- # compare fold changes -->
+<!-- toptable$KI %>%  -->
+<!--   dplyr::filter(PROBEID %in% papers_de_res_nlgf$`Affymetrix ID`) %>%  -->
+<!--   left_join(papers_de_res_nlgf %>%  -->
+<!--               dplyr::rename(PROBEID = `Affymetrix ID`) %>%  -->
+<!--               mutate(PROBEID = as.character(PROBEID)) -->
+<!--             ) %>%  -->
+<!--   ggplot(aes(x = logFC, y = log(`Fold Change`))) + -->
+<!--   geom_abline(slope = 1, linetype = "dashed", colour = "blue") + -->
+<!--   geom_point(alpha = 0.5, size = 2) + -->
+<!--   #geom_label(aes(label = ID)) + -->
+<!--   # scale_x_continuous(limits = c(-1, 4)) + -->
+<!--   # scale_y_continuous(limits = c(-1, 4)) + -->
+<!--   theme_bw() +  -->
+<!--   labs(x = "logFC in Barthelson et al",  -->
+<!--        y = "logFC in Castillo et al") + -->
+<!--   theme(aspect.ratio = 1) + -->
+<!--   ggtitle("DE genes in the current and original analysis") -->
+<!-- ``` -->
+
+## Volcano plot
+```{r}
+toptable %>% 
+  bind_rows() %>% 
+  mutate(DE_dir = case_when(
+    DE == TRUE & sign(logFC) == 1 ~ "Upregulation\n(FDR < 0.05)", 
+    DE == TRUE & sign(logFC) == -1 ~ "Downregulation\n(FDR < 0.05)", 
+    TRUE ~ "No significant change"
+  )) %>% 
+    mutate(coef = case_when(coef == "KI" ~ "APP NL-G-F", 
+                          coef == "Tg" ~ "3xTg")) %>% 
+  ggplot(aes(x = logFC, y = -log10(P.Value))) + 
+  geom_point(aes(colour = DE_dir), 
+             alpha = 0.5) +
+  facet_wrap(~coef) +
+  theme_bw() +
+  labs(colour = "Probes with significant:")+
+  scale_color_manual(values = c("darkblue", "grey30", "red"))+
+  theme(legend.position = "bottom", plot.margin = unit(c(1, 2, 2, 4), "cm")) 
+```
+
+```{r}
+toptable %>% 
+  bind_rows() %>% 
+  mutate(DE_dir = case_when(
+    DE == TRUE & sign(logFC) == 1 ~ "Upregulation\n(FDR < 0.05)", 
+    DE == TRUE & sign(logFC) == -1 ~ "Downregulation\n(FDR < 0.05)", 
+    TRUE ~ "No significant change"
+  )) %>% 
+    mutate(coef = case_when(coef == "KI" ~ "APP NL-G-F", 
+                          coef == "Tg" ~ "3xTg")) %>% 
+  ggplot(aes(x = AveExpr, y = logFC)) + 
+  geom_point(aes(colour = DE_dir), 
+             alpha = 0.5) +
+  facet_wrap(~coef, nrow = 2) +
+  theme_bw() +
+  labs(colour = "Probes with significant:")+
+  scale_color_manual(values = c("darkblue", "grey30", "red"))+
+  theme(legend.position = "bottom", plot.margin = unit(c(1, 2, 2, 4), "cm"))
+```
+
+
+# Enrichment
+## define the kegg and IRE gene sets by gene name. 
+
+Only genes tested in the DE analysis are retained in the gene sets,
+```{r}
+KEGG <- 
+  msigdbr("Mus musculus", category = "C2", subcategory = "CP:KEGG") %>% 
+  dplyr::rename("SYMBOL" = "gene_symbol" ) %>% 
+  dplyr::filter(SYMBOL %in% toptable$KI$SYMBOL) %>% 
+  dplyr::filter(!is.na(SYMBOL)) %>% 
+  distinct(gs_name, SYMBOL, .keep_all = TRUE) %>% 
+  split(f = .$gs_name) %>%
+  lapply(extract2, "SYMBOL")
+
+# a file downloaded from biomart
+biomart <- read_tsv("data/AppNL-G-F.microarray/mart_export (2).txt") 
+  
+ireGenes <- 
+  read_excel("data/ireGenes.xlsx", sheet = "Mouse IREs") %>% 
+    gather(key = "ire", value = "gene_id") %>% 
+    left_join(biomart %>% 
+                dplyr::select(gene_id =  `Gene stable ID`, 
+                              `Gene name`) %>% 
+                unique()
+    ) %>% 
+    dplyr::filter(`Gene name` %in% toptable$Tg$SYMBOL) %>% 
+    split(f = .$ire) %>% 
+    lapply(magrittr::extract2, "Gene name")
+```
+
+## ORA using `kegga`
+
+```{r}
+ora <-  toptable %>% 
+  sapply(function(x){ 
+    kegga(de = x %>% 
+            dplyr::filter(DE == TRUE) %>% 
+            .$SYMBOL, 
+          universe = x %>% 
+            .$SYMBOL, 
+          gene.pathway = KEGG %>% 
+            unlist %>%
+            as.data.frame() %>%
+            rownames_to_column("pathway") %>%
+            set_colnames(c("pathway", "gene_id")) %>%
+            mutate(pathway = pathway %>% str_remove_all("[0-9]+$")) %>%
+            dplyr::select(gene_id, pathway) %>% 
+            bind_rows(ireGenes %>% 
+                        unlist %>%
+                        as.data.frame() %>%
+                        rownames_to_column("pathway") %>%
+                        set_colnames(c("pathway", "gene_id")) %>%
+                        mutate(pathway = pathway %>%
+                                 str_remove_all("[0-9]+$")) %>%
+                        dplyr::select(gene_id, pathway))
+    ) %>% 
+      topKEGG(number = Inf ) %>% 
+      as.data.frame() %>% 
+      rownames_to_column("pathway") %>% 
+      as_tibble() %>% 
+      mutate(FDR = p.adjust(P.DE, "fdr"), 
+             bonf = p.adjust(P.DE, "bonf"),
+             sig = FDR < 0.05, 
+             coef = unique(x$coef)) %>% 
+      dplyr::select(pathway, raw.p = P.DE, FDR, bonf, sig, DE, N, coef)
+  }, simplify = FALSE)
+
+sigGenesets <- ora %>% 
+  bind_rows() %>% 
+  dplyr::filter(bonf < 0.05) %>% 
+  .$pathway %>% 
+  unique
+  
+
+ora %>% 
+  bind_rows() %>% 
+  dplyr::filter(pathway %in% sigGenesets) %>% 
+  mutate(coef = case_when(coef == "KI" ~ "APP NL-G-F", 
+                          coef == "Tg" ~ "3xTg")) %>% 
+  mutate(N = case_when(
+    coef == "3xTg" ~ N*-1, 
+    TRUE ~ N
+  ), 
+  DE = case_when(
+    coef == "3xTg" ~ DE*-1, 
+    TRUE ~ DE
+  )) %>% 
+  ggplot(aes(y = reorder(pathway, abs(N)))) +
+  geom_col(aes(x = N), fill = "grey") +
+  geom_col(aes(x = DE), fill = "orchid3") +
+  geom_point(x = -10,
+             size = 2,
+             data = . %>% 
+               dplyr::filter(coef == "APP NL-G-F" & bonf < 0.05)) +
+  geom_point(x = 10, 
+             fill = "magenta",
+             size = 2,
+             data = . %>% 
+               dplyr::filter(coef == "3xTg" & bonf < 0.05)) +
+  facet_share(~coef, scales = "free_x") +
+  theme_bw() +
+  labs(x = "Number of genes in geneset",
+       fill = "Number of DE genes in gene set",
+       y = "gene set") 
+  #ggtitle("Over-represented KEGG and IRE gene sets", subtitle = "FDR < 0.05")
+
+```
+
+```{r, fig.cap="Distribution of DE genes in homozygous knock in mouse brains"}
+KEGG[ora$KI %>% 
+  dplyr::filter(bonf < 0.05) %>% 
+  .$pathway] %>% 
+  lapply(function(x) {
+    x %>% 
+      intersect(toptable$KI %>% dplyr::filter(DE == TRUE) %>% .$SYMBOL)
+  }) %>% 
+  fromList() %>% 
+  upset(order.by = 'freq', 
+        nsets = length(.), )
+
+```
+
+## ranked lists
+
+For enrichment analysis, I will perform enrichment testing on the HMP of fry, camera and fgsea. Since a single gene can have the multiple probes, I will use the probe with the highest expression as the respresentative probe for that particular gene. 
+
+```{r}
+enrichInput <- 
+  exprs(final.eset) %>% 
+  as.data.frame() %>% 
+  rownames_to_column("PROBEID") %>% 
+  as_tibble() %>% 
+  left_join(toptable$KI %>% dplyr::select(PROBEID, SYMBOL)) %>%
+  gather(key = 'sample', value = 'expression', targets$sample) %>% 
+  group_by(SYMBOL, sample) %>% 
+  summarise(expression = max(expression)) %>% 
+  spread(key ='sample', value = 'expression' ) %>% 
+  ungroup() %>% 
+  column_to_rownames("SYMBOL")
+
+fryRes <- colnames(contrasts) %>% 
+  sapply(function(x) {
+    enrichInput  %>% 
+      fry(index = c(KEGG,ireGenes), 
+          design = design, 
+          contrast = contrasts[,x], 
+          sort = "mixed"
+      ) %>% 
+      rownames_to_column('geneset') %>% 
+      mutate(
+        coef = x) %>% 
+      as_tibble()
+  }, simplify = FALSE)
+
+camerares <- colnames(contrasts) %>% 
+  sapply(function(x) {
+    
+    enrichInput %>% 
+      camera(index = c(KEGG,ireGenes), 
+             design = design, 
+             contrast = contrasts[,x]
+      ) %>% 
+      rownames_to_column('geneset') %>% 
+      mutate(
+        coef = x) %>% 
+      as_tibble()
+  }, simplify = FALSE)
+
+ranks <- sapply(toptable, function(x) {
+  x %>% 
+    dplyr::filter(SYMBOL %in% rownames(enrichInput)) %>% 
+    arrange(t) %>% 
+    dplyr::select(c("SYMBOL", "t")) %>% #only want the Pvalue with sign
+    with(structure(t, names = SYMBOL)) %>% 
+    rev() # reverse so the start of the list is upregulated genes
+}, simplify = FALSE)
+
+fgseares <- ranks %>% 
+  lapply(function(x) {
+    fgseaMultilevel(x, pathways =  c(KEGG, ireGenes)) %>% 
+      as_tibble() %>%
+      dplyr::rename(FDR = padj) %>%
+      mutate(padj = p.adjust(pval, "bonferroni"), 
+             sig = padj < 0.05) %>%
+      dplyr::select(pathway, pval, FDR, padj, everything()) %>%
+      arrange(pval) 
+  })
+
+fgseares$KI %<>% 
+  mutate(coef = "KI")
+
+fgseares$Tg %<>% 
+  mutate(coef = "Tg")
+
+HMP <- 
+  fryRes %>% 
+  bind_rows() %>% 
+  dplyr::select(geneset, PValue, coef) %>% 
+  dplyr::rename(fry_p = PValue) %>% 
+  left_join(camerares %>% 
+              bind_rows() %>% 
+              dplyr::select(geneset, PValue, coef), 
+            by = c("geneset", "coef")) %>% 
+  dplyr::rename(camera_p = PValue) %>% 
+  left_join(fgseares %>% 
+              bind_rows() %>% 
+              dplyr::select(c(geneset = pathway), pval, coef), 
+            by = c("geneset", "coef")) %>% 
+  dplyr::rename(fgsea_p = pval) %>% 
+  bind_rows() %>% 
+  nest(p = one_of(c("fry_p", "camera_p", "fgsea_p"))) %>% 
+ mutate(harmonic_p = vapply(p, function(x){
+        x <- unlist(x)
+        x <- x[!is.na(x)]
+        p.hmp(x, L = 4)
+      }, numeric(1))
+    ) %>% 
+  unnest() %>% 
+  mutate(harmonic_p_FDR = p.adjust(harmonic_p, "fdr"), 
+         hmp_bonf = p.adjust(harmonic_p, "bonf"),
+         sig = harmonic_p_FDR < 0.05) %>% 
+  arrange(harmonic_p)  
+
+HMP
+
+sigpaths <-HMP %>% 
+  dplyr::filter(hmp_bonf < 0.05) %>% .$geneset %>% unique()
+
+HMP %>% 
+  dplyr::filter(geneset %in% sigpaths) %>% 
+  mutate(coef = case_when(coef == "KI" ~ "APP NL-G-F", 
+                          coef == "Tg" ~ "3xTg") 
+         ) %>% 
+  ggplot(aes(y = geneset , x = -log10(harmonic_p))) +
+  geom_col(aes(fill = hmp_bonf < 0.05)
+           ) +
+  scale_fill_viridis_d(end = .5) +
+  theme_bw() +
+  facet_share(~coef, reverse_num = T) +
+  labs(x = "-log10(harmonic_p)",
+       fill = "Bonferroni-adjusted\nharmonic_p < 0.05",
+       y = "gene set") +
+  theme(legend.position = "bottom") 
+  #ggsave("plots/HMP.png", width = 30, height = 20, units = "cm", dpi = 800, scale = 1.3)
+```
+
+## upset plots of leading edge genes and DE genes
+```{r}
+a <- KEGG[HMP %>% 
+  dplyr::filter(coef == "KI" & hmp_bonf < 0.05) %>% 
+  .$geneset] %>% 
+  lapply(function(x) {
+    x %>% 
+      intersect(toptable$KI %>% dplyr::filter(DE == TRUE) %>% .$SYMBOL)
+  }) %>% 
+  fromList() %>% 
+  upset(order.by = 'freq', 
+        nsets = length(.)
+  )
+
+b <- fgseares$KI %>% 
+  dplyr::filter(pathway %in% c(HMP %>% 
+                                 dplyr::filter(coef == "KI" & hmp_bonf < 0.05) %>% .$geneset)) %>% 
+  dplyr::select(pathway, leadingEdge) %>%  
+  unnest %>%  
+  split(f = .$pathway) %>% 
+  lapply(magrittr::extract2,"leadingEdge")  %>% 
+  fromList() %>% 
+  upset(nsets = length(.), 
+        order.by = 'freq'
+        )
+
+# convert to cowplots for easier plotting and exporting. 
+a_cow <- cowplot::plot_grid(NULL, a$Main_bar, a$Sizes, a$Matrix,
+                            nrow=2, align='hv', rel_heights = c(1,1),
+                            labels = "DE genes",
+                           rel_widths = c(3,4))
+
+b_cow <- cowplot::plot_grid(NULL, b$Main_bar, b$Sizes, b$Matrix,
+                            nrow=2, align='hv', rel_heights = c(1,1), 
+                            labels = "Leading edge genes",
+                           rel_widths = c(3,4)) 
+
+a_cow
+b_cow
+```
+# cell type check
+
+```{r}
+cell_type_markers <- read_xls("data/cell_type_genes41586_2007_BFnature05453_MOESM11_ESM.xls") %>%
+  as_tibble() %>%
+ dplyr::select(c("Neuron-enriched", "Astrocyte-enriched", "Oligodendrocyte-enriched")) %>%
+  gather(key = "cell_type", value = "gene_name") %>% 
+  dplyr::filter(gene_name %in% rownames(enrichInput)) %>% 
+  split(f = .$cell_type) %>% 
+  lapply(extract2, "gene_name")
+
+
+cell_type_markers$`Microglia-enriched` <- read_excel("data/microglia_oosterofetal.xlsx", sheet = 1) %>%
+  rbind(read_excel("data/microglia_oosterofetal.xlsx", sheet = 2)) %>%
+  rbind(read_excel("data/microglia_oosterofetal.xlsx", sheet = 3)) %>%
+  .$Mouse.Associated.Gene.Name  %>%
+  unique
+
+ggarrange(
+  colnames(contrasts) %>% 
+    sapply(function(x) {
+      enrichInput  %>% 
+        fry(index = cell_type_markers, 
+            design = design, 
+            contrast = contrasts[,x], 
+            sort = "directional"
+        ) %>% 
+        rownames_to_column('geneset') %>% 
+        mutate(
+          coef = x) %>% 
+        as_tibble()
+    }, simplify = FALSE) %>% 
+    bind_rows() %>% 
+      mutate(coef = case_when(coef == "KI" ~ "APP NL-G-F", 
+                              coef == "Tg" ~ "3xTg")) %>% 
+    dplyr::select(geneset, coef,  NGenes, PValue, FDR, Direction) %>% 
+    ggplot(aes(x = -log10(FDR), y = reorder(geneset, FDR))) +
+    geom_col() +
+    geom_vline(xintercept = -log10(0.05)) +
+    facet_wrap(~coef) +
+    theme_bw() +
+    labs(y = "marker gene set", 
+         x = "-log10(FDR from fry)"), 
+  ggarrange(
+    enrichInput %>% 
+      .[c(cell_type_markers$`Astrocyte-enriched`),] %>% 
+      gather(key = "sample", value = "Expression", targets$sample) %>%
+      left_join(targets) %>% 
+      mutate(Genotype = factor(Genotype, levels = c("APP_WT", "APP_NLGF", "Non_Tg", "AD3xTg"))) %>% #group_by(Genotype) %>% summarise(mean = mean(Expression)) to work out mean of WT for geom_hline
+      ggplot(aes(x = Genotype, y = Expression)) +
+      geom_flat_violin( aes(fill = Genotype),
+                        position = position_nudge(x = 0.2, y = 0),
+                        alpha = 0.75,
+                        colour = NA, 
+                        trim = FALSE) +
+      geom_point(aes(colour = Genotype), 
+                 position = position_jitter(width = 0.15), size = 2, alpha = 0.75 ) +
+      geom_boxplot(width = 0.2, 
+                   outlier.shape = NA, 
+                   alpha = 0.7, 
+                   aes(colour = Genotype)
+      ) +
+      theme_bw() +
+      stat_summary(geom= "point", fun = "mean", shape = 23, size = 4, fill = 'red') +
+      geom_hline(yintercept =  8.05, linetype = 2) + # mean of WT
+      labs(x = "",
+           fill = "Genotype") +
+      ggtitle("Astrocytes"), 
+    
+    enrichInput %>% 
+      .[c(cell_type_markers$`Neuron-enriched`),] %>% 
+      gather(key = "sample", value = "Expression", targets$sample) %>%
+      left_join(targets) %>% #group_by(Genotype) %>% summarise(mean = mean(Expression))
+      mutate(Genotype = factor(Genotype, levels = c("APP_WT", "APP_NLGF", "Non_Tg", "AD3xTg"))) %>%
+      ggplot(aes(x = Genotype, y = Expression)) +
+      geom_flat_violin( aes(fill = Genotype),
+                        colour = NA,
+                        position = position_nudge(x = 0.2, y = 0),
+                        alpha = 0.75,
+                        trim = FALSE) +
+      geom_point(aes(colour = Genotype), 
+                 position = position_jitter(width = 0.15), size = 2, alpha = 0.75 ) +
+      geom_boxplot(width = 0.2, 
+                   outlier.shape = NA, 
+                   alpha = 0.7, 
+                   aes(colour = Genotype)
+      ) +
+      theme_bw() +
+      stat_summary(geom= "point", fun = "mean", shape = 23, size = 4, fill = 'red') +
+      geom_hline(yintercept =  9.87, linetype = 2) +
+      labs(x = "",
+           fill = "Genotype") +
+      ggtitle("Neurons"),
+    
+    enrichInput %>% 
+      .[c(cell_type_markers$`Oligodendrocyte-enriched`),] %>% 
+      gather(key = "sample", value = "Expression", targets$sample) %>%
+      left_join(targets) %>% 
+      mutate(Genotype = factor(Genotype, levels = c("APP_WT", "APP_NLGF", "Non_Tg", "AD3xTg"))) %>% #group_by(Genotype) %>% summarise(mean = mean(Expression))
+      ggplot(aes(x = Genotype, y = Expression)) +
+      geom_flat_violin( aes(fill = Genotype), 
+                        colour = NA,
+                        position = position_nudge(x = 0.2, y = 0),
+                        alpha = 0.75,
+                        trim = FALSE) +
+      geom_point(aes(colour = Genotype), 
+                 position = position_jitter(width = 0.15), size = 2, alpha = 0.75 ) +
+      geom_boxplot(width = 0.2, 
+                   outlier.shape = NA, 
+                   alpha = 0.7, 
+                   aes(colour = Genotype)
+      ) +
+      geom_hline(yintercept = 8.24, linetype = 2) +
+      stat_summary(geom= "point", fun = "mean", shape = 23, size = 4, fill = 'red') +
+      theme_bw() +
+      labs(x = "",
+           fill = "Genotype") +
+      ggtitle("Oligodendrocytes"), 
+    
+    enrichInput %>% 
+      .[c(cell_type_markers$`Microglia-enriched`),] %>% 
+      gather(key = "sample", value = "Expression", targets$sample) %>%
+      left_join(targets) %>% 
+      mutate(Genotype = factor(Genotype, levels = c("APP_WT", "APP_NLGF", "Non_Tg", "AD3xTg"))) %>% 
+      na.omit %>% #group_by(Genotype) %>% summarise(mean = mean(Expression))
+      ggplot(aes(x = Genotype, y = Expression)) +
+      geom_flat_violin( aes(fill = Genotype),
+                        position = position_nudge(x = 0.2, y = 0),
+                        colour = NA, 
+                        alpha = 0.75,
+                        trim = FALSE) +
+      geom_point(aes(colour = Genotype), 
+                 position = position_jitter(width = 0.15), size = 2, alpha = 0.75 ) +
+      geom_boxplot(width = 0.2, 
+                   outlier.shape = NA, 
+                   alpha = 0.7, 
+                   aes(colour = Genotype)
+      ) +
+      theme_bw() +
+      stat_summary(geom= "point", fun = "mean", shape = 23, size = 4, fill = 'red') +
+      geom_hline(yintercept = 5.86, linetype = 2) +
+      labs(x = "",
+           fill = "Genotype") +
+      ggtitle("Microglia"), 
+    common.legend = TRUE, legend = "none" ), 
+  labels = "AUTO", 
+  common.legend = F, 
+  ncol = 1, 
+  heights = c(1, 4)
+) 
+
+c <- list(DE_genes_APP_NLGF = toptable$KI %>% 
+                  dplyr::filter(DE == TRUE) %>% 
+                  .$SYMBOL, 
+     `Astrocyte-enriched` = cell_type_markers$`Astrocyte-enriched`, 
+     `Neuron-enriched` = cell_type_markers$`Neuron-enriched`, 
+     `Oligodendrocyte-enriched`  = cell_type_markers$`Oligodendrocyte-enriched`, 
+     `Microglia-enriched` = cell_type_markers$`Microglia-enriched`
+     ) %>% 
+  fromList() %>% 
+  upset(order.by = "freq", 
+        queries = list(
+          list(
+            query = intersects, 
+            params = list(
+              "DE_genes_APP_NLGF", "Microglia-enriched"
+            ), 
+            active = TRUE
+          )
+        ))
+
+d <- list(DE_genes_3xTg = toptable$Tg %>% 
+                  dplyr::filter(DE == TRUE) %>% 
+                  .$SYMBOL, 
+     `Astrocyte-enriched` = cell_type_markers$`Astrocyte-enriched`, 
+     `Neuron-enriched` = cell_type_markers$`Neuron-enriched`, 
+     `Oligodendrocyte-enriched`  = cell_type_markers$`Oligodendrocyte-enriched`, 
+     `Microglia-enriched` = cell_type_markers$`Microglia-enriched`
+     ) %>% 
+  fromList() %>% 
+  upset(order.by = "freq", 
+    
+        )
+
+
+# convert to cowplots for easier plotting and exporting. 
+c_cow <- cowplot::plot_grid(NULL, c$Main_bar, c$Sizes, c$Matrix,
+                            nrow=2, align='hv', rel_heights = c(1,1),
+                            labels = "APP NLGF",
+                           rel_widths = c(3,4))
+
+d_cow <- cowplot::plot_grid(NULL, d$Main_bar, d$Sizes, d$Matrix,
+                            nrow=2, align='hv', rel_heights = c(1,1), 
+                            labels = "3xTg",
+                           rel_widths = c(3,4)) 
+
+plot_grid(c_cow, d_cow, ncol = 2,  nrow = 1 ) 
+```
+
+# Session info
+
+```{r}
+sessionInfo()
+```
+
+
+<!-- # Plots for paper; -->
+
+<!-- ## fig 1 raw + processed data -->
+<!-- ```{r} -->
+<!-- ggarrange( -->
+<!--  exprs(exp.cel) %>% -->
+<!--   log2() %>% -->
+<!--     as.data.frame() %>% -->
+<!--     rownames_to_column("probeID") %>% -->
+<!--     gather(key = "sample", value = "expression", -->
+<!--            targets$sample) %>% -->
+<!--     left_join(pData(exp.cel) %>% -->
+<!--                 as.data.frame() %>% -->
+<!--                 rownames_to_column("sample")) %>% -->
+<!--     ggplot(aes(x = sample, y = expression)) + -->
+<!--     geom_boxplot(aes(fill = Genotype), width = 0.2) + -->
+<!--     geom_flat_violin(aes(fill = Genotype), -->
+<!--                      colour = NA, -->
+<!--                      position = position_nudge(x = .2)) + -->
+<!--     ggtitle("Boxplot of raw expression values") + -->
+<!--     theme_bw() + -->
+<!--     easy_rotate_x_labels(angle = 315), -->
+
+<!-- exprs(exp.cel) %>% -->
+<!--   log2() %>% -->
+<!--   as.data.frame() %>% -->
+<!--   rownames_to_column("probeID") %>% -->
+<!--   gather(key = "sample", value = "expression", -->
+<!--          targets$sample) %>% -->
+<!--   left_join(pData(exp.cel) %>% -->
+<!--               as.data.frame() %>% -->
+<!--               rownames_to_column("sample")) %>% -->
+<!--   ggplot(aes(x = expression, colour = sample)) + -->
+<!--   geom_density() + -->
+<!--   ggtitle("Density plot of raw expression values") + -->
+<!--   theme_bw(), -->
+
+<!-- exprs(final.eset) %>% -->
+<!--   log2() %>% -->
+<!--     as.data.frame() %>% -->
+<!--     rownames_to_column("probeID") %>% -->
+<!--     gather(key = "sample", value = "expression", -->
+<!--            targets$sample) %>% -->
+<!--     left_join(pData(exp.cel) %>% -->
+<!--                 as.data.frame() %>% -->
+<!--                 rownames_to_column("sample")) %>% -->
+<!--     ggplot(aes(x = sample, y = expression)) + -->
+<!--     geom_boxplot(aes(fill = Genotype), width = 0.2) + -->
+<!--     geom_flat_violin(aes(fill = Genotype), -->
+<!--                      colour = NA, -->
+<!--                      position = position_nudge(x = .2)) + -->
+<!--     ggtitle("Boxplot of processed expression values") + -->
+<!--     theme_bw() + -->
+<!--     easy_rotate_x_labels(angle = 315), -->
+
+<!-- exprs(final.eset) %>% -->
+<!--   log2() %>% -->
+<!--   as.data.frame() %>% -->
+<!--   rownames_to_column("probeID") %>% -->
+<!--   gather(key = "sample", value = "expression", -->
+<!--          targets$sample) %>% -->
+<!--   left_join(pData(exp.cel) %>% -->
+<!--               as.data.frame() %>% -->
+<!--               rownames_to_column("sample")) %>% -->
+<!--   ggplot(aes(x = expression, colour = sample)) + -->
+<!--   geom_density() + -->
+<!--   ggtitle("Density plot of processed expression values") + -->
+<!--   theme_bw(), -->
+
+<!-- labels = "AUTO",  -->
+<!-- common.legend = FALSE -->
+<!-- ) + -->
+<!--   ggsave("Plotsforpub/Fig1.png", width = 30, height = 20, units = "cm", dpi = 600, scale = 1.5) -->
+
+
+<!-- ``` -->
+
+<!-- ## Fig 2: PCA -->
+<!-- ```{r} -->
+<!-- exprs(final.eset) %>%  -->
+<!--     t() %>%  -->
+<!--     prcomp() %>%  -->
+<!--     autoplot(data = tibble(sample = rownames(.$x)) %>% -->
+<!--                left_join(targets),  -->
+<!--              colour = "Genotype",  -->
+<!--              size = 4) + -->
+<!--     theme_bw() + -->
+<!--     theme(aspect.ratio = 1) + -->
+<!-- ggsave("Plotsforpub/Fig2.png", width = 10, height = 10, units = "cm", dpi = 600, scale = 1.5) -->
+<!-- ``` -->
+
+<!-- ## Fig 3 DE  -->
+
+<!-- ```{r} -->
+<!-- ggarrange(toptable %>%  -->
+<!--   bind_rows() %>%  -->
+<!--   mutate(DE_dir = case_when( -->
+<!--     DE == TRUE & sign(logFC) == 1 ~ "Upregulation\n(FDR < 0.05)",  -->
+<!--     DE == TRUE & sign(logFC) == -1 ~ "Downregulation\n(FDR < 0.05)",  -->
+<!--     TRUE ~ "No significant change" -->
+<!--   )) %>%  -->
+<!--     mutate(coef = case_when(coef == "KI" ~ "APP NL-G-F",  -->
+<!--                           coef == "Tg" ~ "3xTg")) %>%  -->
+<!--   ggplot(aes(x = logFC, y = -log10(P.Value))) +  -->
+<!--   geom_point(aes(colour = DE_dir),  -->
+<!--              alpha = 0.5) + -->
+<!--   facet_wrap(~coef) + -->
+<!--   theme_bw() + -->
+<!--   labs(colour = "Probes with significant:")+ -->
+<!--     scale_color_manual(values = c("darkblue", "grey30", "red")),  -->
+<!--   toptable %>%  -->
+<!--     bind_rows() %>%  -->
+<!--     mutate(DE_dir = case_when( -->
+<!--       DE == TRUE & sign(logFC) == 1 ~ "Upregulation\n(FDR < 0.05)",  -->
+<!--       DE == TRUE & sign(logFC) == -1 ~ "Downregulation\n(FDR < 0.05)",  -->
+<!--       TRUE ~ "No significant change" -->
+<!--     )) %>%  -->
+<!--     mutate(coef = case_when(coef == "KI" ~ "APP NL-G-F",  -->
+<!--                             coef == "Tg" ~ "3xTg")) %>%  -->
+<!--     ggplot(aes(x = AveExpr, y = logFC)) +  -->
+<!--     geom_point(aes(colour = DE_dir),  -->
+<!--                alpha = 0.5) + -->
+<!--     facet_wrap(~coef, nrow = 2) + -->
+<!--     theme_bw() + -->
+<!--     labs(colour = "Probes with significant:")+ -->
+<!--     scale_color_manual(values = c("darkblue", "grey30", "red")),  -->
+<!--   common.legend = TRUE,  -->
+<!--   labels = "AUTO" -->
+<!--   ) + -->
+<!--   ggsave("Plotsforpub/MDpltandvolcanoPlot.png", width = 18, height = 10, units = "cm", dpi = 800, scale = 1.5) -->
+
+<!-- final.eset[c(intersect(toptable$KI %>%  -->
+<!--                            dplyr::filter(DE == TRUE) %>%  -->
+<!--                            .$PROBEID,  -->
+<!--                          toptable$Tg %>%  -->
+<!--                            dplyr::filter(DE == TRUE) %>%  -->
+<!--                            .$PROBEID)),] %>%  -->
+<!--   exprs %>%  -->
+<!--   as.data.frame() %>%  -->
+<!--   rownames_to_column("PROBEID") %>%  -->
+<!--   left_join(anno) %>%  -->
+<!--   gather("sample", "expression", targets$sample) %>%  -->
+<!--   left_join(targets) %>%  -->
+<!--   mutate(Genotype = factor(Genotype, levels = c("APP_WT", "APP_NLGF", "Non_Tg", "AD3xTg"))) %>%  -->
+<!--   ggplot(aes(x = Genotype, y = expression)) + -->
+<!--   geom_boxplot(aes(colour = Genotype)) + -->
+<!--    geom_jitter() + -->
+<!--   facet_wrap(~SYMBOL, scales = "free_y") + -->
+<!--   theme_bw() + -->
+<!--   theme(legend.position = "none") + -->
+<!--   easy_rotate_x_labels(angle = -45) + -->
+<!--   scale_y_continuous(expand = expansion(mult = c(0.2, 0.4))) + # add 20% and 40% of space above and below the data points respectively -->
+
+<!-- ggsave("Plotsforpub/sharedDEgenes.png", width = 15, height = 10, units = "cm", dpi = 600, scale = 1.5) -->
+<!-- ```   -->
+
+<!-- ## Fig 4: -->
+
+<!-- ```{r} -->
+<!-- plot1 <- KEGG[ora$KI %>%  -->
+<!--   dplyr::filter(bonf < 0.05) %>%  -->
+<!--   .$pathway] %>%  -->
+<!--   lapply(function(x) { -->
+<!--     x %>%  -->
+<!--       intersect(toptable$KI %>% dplyr::filter(DE == TRUE) %>% .$SYMBOL) -->
+<!--   }) %>%  -->
+<!--   fromList() %>%  -->
+<!--   upset(order.by = 'freq',  -->
+<!--         nsets = length(.), ) -->
+<!-- ggarrange( -->
+<!--   ora %>%  -->
+<!--     bind_rows() %>%  -->
+<!--     dplyr::filter(pathway %in% sigGenesets) %>%  -->
+<!--     mutate(coef = case_when(coef == "KI" ~ "APP NL-G-F",  -->
+<!--                             coef == "Tg" ~ "3xTg")) %>%  -->
+<!--     mutate(N = case_when( -->
+<!--       coef == "3xTg" ~ N*-1,  -->
+<!--       TRUE ~ N -->
+<!--     ),  -->
+<!--     DE = case_when( -->
+<!--       coef == "3xTg" ~ DE*-1,  -->
+<!--       TRUE ~ DE -->
+<!--     )) %>%  -->
+<!--     ggplot(aes(y = reorder(pathway, abs(N)))) + -->
+<!--     geom_col(aes(x = N), fill = "grey") + -->
+<!--     geom_col(aes(x = DE), fill = "orchid3") + -->
+<!--     geom_point(x = -10, -->
+<!--                size = 2, -->
+<!--                data = . %>%  -->
+<!--                  dplyr::filter(coef == "APP NL-G-F" & bonf < 0.05)) + -->
+<!--     geom_point(x = 10,  -->
+<!--                size = 2, -->
+<!--                data = . %>%  -->
+<!--                  dplyr::filter(coef == "3xTg" & bonf < 0.05)) + -->
+<!--     facet_share(~coef, scales = "free_x") + -->
+<!--     theme_bw() + -->
+<!--     labs(x = "Number of genes in geneset", -->
+<!--          fill = "Number of DE genes in gene set", -->
+<!--          y = "gene set") ,  -->
+<!--   cowplot::plot_grid(NULL, plot1$Main_bar, plot1$Sizes, plot1$Matrix, -->
+<!--                      nrow=2, align='hv', rel_heights = c(1,1), -->
+<!--                      rel_widths = c(3,4)),  -->
+<!--   labels = "AUTO",  -->
+<!--   common.legend = F,  -->
+<!--   ncol = 1, nrow = 2 -->
+<!-- ) + -->
+<!--   ggsave("Plotsforpub/fig4.png", width = 18, height = 20, units = "cm", dpi = 600, scale = 2) -->
+
+<!-- enrichInput[KEGG$KEGG_LYSOSOME,] %>%  -->
+<!--   t() %>%  -->
+<!--   pheatmap(color = viridis::viridis_pal(option = "viridis")(100),  -->
+<!--            border_color = "black", -->
+<!--            annotation_colors = list(DE = c("FALSE" = "grey50", -->
+<!--                                            "TRUE" = "red")), -->
+<!--            cellheight = 10,  -->
+<!--            fontsize = 8,  -->
+<!--            main = "KEGG_LYSOSOME", -->
+<!--            legend_breaks = c(seq(0, 12, by = 2), max(.)), -->
+<!--            legend_labels = c(seq(0, 12, by = 2), "Intensity\n"), -->
+<!--            annotation_col = toptable$KI %>%  -->
+<!--              dplyr::select(SYMBOL, logFC.in.APP.NLGF = logFC, DE) %>%  -->
+<!--              dplyr::filter(SYMBOL %in% KEGG$KEGG_LYSOSOME) %>%  -->
+<!--              mutate(DE = as.character(DE)) %>%  -->
+<!--              dplyr::distinct(SYMBOL, .keep_all = TRUE) %>%  -->
+<!--              column_to_rownames("SYMBOL") -->
+<!--            ) -->
+<!-- ``` -->
+
+<!-- ## fig 5: HMP -->
+
+<!-- ```{r} -->
+<!-- HMP %>%  -->
+<!--   dplyr::filter(geneset %in% sigpaths) %>%  -->
+<!--   mutate(coef = case_when(coef == "KI" ~ "APP NL-G-F",  -->
+<!--                           coef == "Tg" ~ "3xTg")  -->
+<!--          ) %>%  -->
+<!--   ggplot(aes(y = geneset , x = -log10(harmonic_p))) + -->
+<!--   geom_col(aes(fill = hmp_bonf < 0.05) -->
+<!--            ) + -->
+<!--   scale_fill_viridis_d(end = .5) + -->
+<!--   theme_bw() + -->
+<!--   facet_share(~coef, reverse_num = F) + -->
+<!--   labs(x = "-log10(harmonic_p)", -->
+<!--        fill = "Bonferroni-adjusted\nharmonic_p < 0.05", -->
+<!--        y = "gene set") + -->
+<!--   theme(legend.position = "bottom") + -->
+<!--   ggsave("Plotsforpub/fig5A.png", width = 20, height = 10, units = "cm", dpi = 600, scale = 2) -->
+
+<!-- plot_grid(a_cow, b_cow, ncol = 1, nrow = 2 ) + -->
+<!--   ggsave("Plotsforpub/fig5b.png", width = 20, height = 18, units = "cm", dpi = 600, scale = 2) -->
+<!-- ``` -->
+
+<!-- ## Fig 6 summary -->
+
+<!-- ```{r} -->
+<!-- ora %>%  -->
+<!--   bind_rows() %>%  -->
+<!--   left_join(HMP %>%  -->
+<!--               dplyr::rename(pathway = geneset),  -->
+<!--             by = c("pathway", "coef"))  %>%  -->
+<!--   dplyr::select(pathway, coef, bonf, hmp_bonf) %>%  -->
+<!--   mutate(sig_in = case_when( -->
+<!--     bonf < 0.05 & hmp_bonf < 0.05 ~ "ORA and HMP",  -->
+<!--     bonf > 0.05 & hmp_bonf < 0.05 ~ "HMP only",  -->
+<!--     bonf < 0.05 & hmp_bonf > 0.05 ~ "ORA only",  -->
+<!--     TRUE ~ "neither" -->
+<!--   ),  -->
+<!--   coef = case_when(coef == "KI" ~ "APP NL-G-F",  -->
+<!--                           coef == "Tg" ~ "3xTg") -->
+<!--   ) %>%  -->
+<!--   dplyr::filter(sig_in != "neither") %>%  -->
+<!--   ggplot(aes(x = coef, y = reorder(pathway, -hmp_bonf))) +  -->
+<!--   geom_tile(aes(fill = coef),  -->
+<!--             colour = "black") + -->
+<!--   scale_fill_viridis_d(end = 0.8) + -->
+<!--   facet_wrap(~sig_in, scales = "free_y") + -->
+<!--   theme_cowplot() + -->
+<!--   easy_rotate_x_labels(angle = -45) + -->
+<!--   labs(x = "Genotype", y = "Gene set") + -->
+<!--   theme(legend.position = "none") + -->
+<!--   ggsave("Plotsforpub/Fig6.png", width = 18, height = 10, units = "cm", dpi = 600, scale = 3) -->
+<!-- ``` -->
+
+<!-- ## fig 7 cell type -->
+
+<!-- ```{r} -->
+<!-- ggarrange( -->
+<!--   colnames(contrasts) %>%  -->
+<!--     sapply(function(x) { -->
+<!--       enrichInput  %>%  -->
+<!--         fry(index = cell_type_markers,  -->
+<!--             design = design,  -->
+<!--             contrast = contrasts[,x],  -->
+<!--             sort = "directional" -->
+<!--         ) %>%  -->
+<!--         rownames_to_column('geneset') %>%  -->
+<!--         mutate( -->
+<!--           coef = x) %>%  -->
+<!--         as_tibble() -->
+<!--     }, simplify = FALSE) %>%  -->
+<!--     bind_rows() %>%  -->
+<!--       mutate(coef = case_when(coef == "KI" ~ "APP NL-G-F",  -->
+<!--                               coef == "Tg" ~ "3xTg")) %>%  -->
+<!--     dplyr::select(geneset, coef,  NGenes, PValue, FDR, Direction) %>%  -->
+<!--     ggplot(aes(x = -log10(FDR), y = reorder(geneset, FDR))) + -->
+<!--     geom_col() + -->
+<!--     geom_vline(xintercept = -log10(0.05)) + -->
+<!--     facet_wrap(~coef) + -->
+<!--     theme_bw() + -->
+<!--     labs(y = "marker gene set",  -->
+<!--          x = "-log10(FDR from fry)"),  -->
+<!--   ggarrange( -->
+<!--     enrichInput %>%  -->
+<!--       .[c(cell_type_markers$`Astrocyte-enriched`),] %>%  -->
+<!--       gather(key = "sample", value = "Expression", targets$sample) %>% -->
+<!--       left_join(targets) %>%  -->
+<!--       mutate(Genotype = factor(Genotype, levels = c("APP_WT", "APP_NLGF", "Non_Tg", "AD3xTg"))) %>% #group_by(Genotype) %>% summarise(mean = mean(Expression)) to work out mean of WT for geom_hline -->
+<!--       ggplot(aes(x = Genotype, y = Expression)) + -->
+<!--       geom_flat_violin( aes(fill = Genotype), -->
+<!--                         position = position_nudge(x = 0.2, y = 0), -->
+<!--                         alpha = 0.75, -->
+<!--                         colour = NA,  -->
+<!--                         trim = FALSE) + -->
+<!--       geom_point(aes(colour = Genotype),  -->
+<!--                  position = position_jitter(width = 0.15), size = 2, alpha = 0.75 ) + -->
+<!--       geom_boxplot(width = 0.2,  -->
+<!--                    outlier.shape = NA,  -->
+<!--                    alpha = 0.7,  -->
+<!--                    aes(colour = Genotype) -->
+<!--       ) + -->
+<!--       theme_bw() + -->
+<!--       stat_summary(geom= "point", fun = "mean", shape = 23, size = 4, fill = 'red') + -->
+<!--       geom_hline(yintercept =  8.08, linetype = 2) + # mean of WT -->
+<!--       labs(x = "", -->
+<!--            fill = "Genotype") + -->
+<!--       ggtitle("Astrocytes"),  -->
+
+<!--     enrichInput %>%  -->
+<!--       .[c(cell_type_markers$`Neuron-enriched`),] %>%  -->
+<!--       gather(key = "sample", value = "Expression", targets$sample) %>% -->
+<!--       left_join(targets) %>% #group_by(Genotype) %>% summarise(mean = mean(Expression)) -->
+<!--       mutate(Genotype = factor(Genotype, levels = c("APP_WT", "APP_NLGF", "Non_Tg", "AD3xTg"))) %>% -->
+<!--       ggplot(aes(x = Genotype, y = Expression)) + -->
+<!--       geom_flat_violin( aes(fill = Genotype), -->
+<!--                         colour = NA, -->
+<!--                         position = position_nudge(x = 0.2, y = 0), -->
+<!--                         alpha = 0.75, -->
+<!--                         trim = FALSE) + -->
+<!--       geom_point(aes(colour = Genotype),  -->
+<!--                  position = position_jitter(width = 0.15), size = 2, alpha = 0.75 ) + -->
+<!--       geom_boxplot(width = 0.2,  -->
+<!--                    outlier.shape = NA,  -->
+<!--                    alpha = 0.7,  -->
+<!--                    aes(colour = Genotype) -->
+<!--       ) + -->
+<!--       theme_bw() + -->
+<!--       stat_summary(geom= "point", fun = "mean", shape = 23, size = 4, fill = 'red') + -->
+<!--       geom_hline(yintercept =  9.98, linetype = 2) + -->
+<!--       labs(x = "", -->
+<!--            fill = "Genotype") + -->
+<!--       ggtitle("Neurons"), -->
+
+<!--     enrichInput %>%  -->
+<!--       .[c(cell_type_markers$`Oligodendrocyte-enriched`),] %>%  -->
+<!--       gather(key = "sample", value = "Expression", targets$sample) %>% -->
+<!--       left_join(targets) %>%  -->
+<!--       mutate(Genotype = factor(Genotype, levels = c("APP_WT", "APP_NLGF", "Non_Tg", "AD3xTg"))) %>% #group_by(Genotype) %>% summarise(mean = mean(Expression)) -->
+<!--       ggplot(aes(x = Genotype, y = Expression)) + -->
+<!--       geom_flat_violin( aes(fill = Genotype),  -->
+<!--                         colour = NA, -->
+<!--                         position = position_nudge(x = 0.2, y = 0), -->
+<!--                         alpha = 0.75, -->
+<!--                         trim = FALSE) + -->
+<!--       geom_point(aes(colour = Genotype),  -->
+<!--                  position = position_jitter(width = 0.15), size = 2, alpha = 0.75 ) + -->
+<!--       geom_boxplot(width = 0.2,  -->
+<!--                    outlier.shape = NA,  -->
+<!--                    alpha = 0.7,  -->
+<!--                    aes(colour = Genotype) -->
+<!--       ) + -->
+<!--       geom_hline(yintercept = 8.2, linetype = 2) + -->
+<!--       stat_summary(geom= "point", fun = "mean", shape = 23, size = 4, fill = 'red') + -->
+<!--       theme_bw() + -->
+<!--       labs(x = "", -->
+<!--            fill = "Genotype") + -->
+<!--       ggtitle("Oligodendrocytes"),  -->
+
+<!--     enrichInput %>%  -->
+<!--       .[c(cell_type_markers$`Microglia-enriched`),] %>%  -->
+<!--       gather(key = "sample", value = "Expression", targets$sample) %>% -->
+<!--       left_join(targets) %>%  -->
+<!--       mutate(Genotype = factor(Genotype, levels = c("APP_WT", "APP_NLGF", "Non_Tg", "AD3xTg"))) %>%  -->
+<!--       na.omit %>% #group_by(Genotype) %>% summarise(mean = mean(Expression)) -->
+<!--       ggplot(aes(x = Genotype, y = Expression)) + -->
+<!--       geom_flat_violin( aes(fill = Genotype), -->
+<!--                         position = position_nudge(x = 0.2, y = 0), -->
+<!--                         colour = NA,  -->
+<!--                         alpha = 0.75, -->
+<!--                         trim = FALSE) + -->
+<!--       geom_point(aes(colour = Genotype),  -->
+<!--                  position = position_jitter(width = 0.15), size = 2, alpha = 0.75 ) + -->
+<!--       geom_boxplot(width = 0.2,  -->
+<!--                    outlier.shape = NA,  -->
+<!--                    alpha = 0.7,  -->
+<!--                    aes(colour = Genotype) -->
+<!--       ) + -->
+<!--       theme_bw() + -->
+<!--       stat_summary(geom= "point", fun = "mean", shape = 23, size = 4, fill = 'red') + -->
+<!--       geom_hline(yintercept = 5.92, linetype = 2) + -->
+<!--       labs(x = "", -->
+<!--            fill = "Genotype") + -->
+<!--       ggtitle("Microglia"),  -->
+<!--     common.legend = TRUE, legend = "none" ),  -->
+<!--   labels = "AUTO",  -->
+<!--   common.legend = F,  -->
+<!--   ncol = 1,  -->
+<!--   heights = c(1, 4) -->
+<!-- ) + -->
+<!--   ggsave("Plotsforpub/fig7a.png") -->
+
+<!-- c <- list(DE_genes_APP_NLGF = toptable$KI %>%  -->
+<!--                   dplyr::filter(DE == TRUE) %>%  -->
+<!--                   .$SYMBOL,  -->
+<!--      `Astrocyte-enriched` = cell_type_markers$`Astrocyte-enriched`,  -->
+<!--      `Neuron-enriched` = cell_type_markers$`Neuron-enriched`,  -->
+<!--      `Oligodendrocyte-enriched`  = cell_type_markers$`Oligodendrocyte-enriched`,  -->
+<!--      `Microglia-enriched` = cell_type_markers$`Microglia-enriched` -->
+<!--      ) %>%  -->
+<!--   fromList() %>%  -->
+<!--   upset(order.by = "freq",  -->
+<!--         queries = list( -->
+<!--           list( -->
+<!--             query = intersects,  -->
+<!--             params = list( -->
+<!--               "DE_genes_APP_NLGF", "Microglia-enriched" -->
+<!--             ),  -->
+<!--             active = TRUE -->
+<!--           ) -->
+<!--         )) -->
+
+<!-- d <- list(DE_genes_3xTg = toptable$Tg %>%  -->
+<!--                   dplyr::filter(DE == TRUE) %>%  -->
+<!--                   .$SYMBOL,  -->
+<!--      `Astrocyte-enriched` = cell_type_markers$`Astrocyte-enriched`,  -->
+<!--      `Neuron-enriched` = cell_type_markers$`Neuron-enriched`,  -->
+<!--      `Oligodendrocyte-enriched`  = cell_type_markers$`Oligodendrocyte-enriched`,  -->
+<!--      `Microglia-enriched` = cell_type_markers$`Microglia-enriched` -->
+<!--      ) %>%  -->
+<!--   fromList() %>%  -->
+<!--   upset(order.by = "freq",  -->
+
+<!--         ) -->
+
+
+<!-- # convert to cowplots for easier plotting and exporting.  -->
+<!-- c_cow <- cowplot::plot_grid(NULL, c$Main_bar, c$Sizes, c$Matrix, -->
+<!--                             nrow=2, align='hv', rel_heights = c(1,1), -->
+<!--                             labels = "APP NLGF", -->
+<!--                            rel_widths = c(3,4)) -->
+
+<!-- d_cow <- cowplot::plot_grid(NULL, d$Main_bar, d$Sizes, d$Matrix, -->
+<!--                             nrow=2, align='hv', rel_heights = c(1,1),  -->
+<!--                             labels = "3xTg", -->
+<!--                            rel_widths = c(3,4))  -->
+
+<!-- plot_grid(c_cow, d_cow, ncol = 2,  nrow = 1 ) + -->
+<!--   ggsave("Plotsforpub/fig7b.png", width = 18, height = 5, units = "cm", dpi = 600, scale = 2) -->
+<!-- ``` -->
+
+
+<!-- ## main paper fig -->
+<!-- ```{r} -->
+<!-- colnames(contrasts) %>%  -->
+<!--     sapply(function(x) { -->
+<!--       enrichInput  %>%  -->
+<!--         fry(index = cell_type_markers,  -->
+<!--             design = design,  -->
+<!--             contrast = contrasts[,x],  -->
+<!--             sort = "directional" -->
+<!--         ) %>%  -->
+<!--         rownames_to_column('geneset') %>%  -->
+<!--         mutate( -->
+<!--           coef = x) %>%  -->
+<!--         as_tibble() -->
+<!--     }, simplify = FALSE) %>%  -->
+<!--     bind_rows() %>%  -->
+<!--   mutate(coef = case_when(coef == "KI" ~ "APP NL-G-F",  -->
+<!--                           coef == "Tg" ~ "3xTg")) %>%  -->
+<!--   dplyr::select(geneset, coef,  NGenes, PValue, FDR, Direction) %>%  -->
+<!--   dplyr::filter(coef == "APP NL-G-F") %>%  -->
+<!--     ggplot(aes(x = -log10(FDR), y = reorder(geneset, FDR))) + -->
+<!--     geom_col() + -->
+<!--     geom_vline(xintercept = -log10(0.05)) + -->
+<!--     theme_bw() + -->
+<!--     labs(y = "marker gene set",  -->
+<!--          x = "-log10(FDR from fry)") + -->
+<!--   ggsave("figforpaper.png",  width = 9, height = 5, units = "cm", dpi = 600, scale = 2) -->
+
+<!-- png("lysoforpaper.png", width = 40, height = 10, units = "cm", res = 1000) -->
+<!-- enrichInput[KEGG$KEGG_LYSOSOME,(targets %>% dplyr::filter(grepl(Genotype, pattern = "APP")) %>% .$sample)] %>%  -->
+<!--   t() %>%  -->
+<!--   pheatmap(color = viridis::viridis_pal(option = "viridis")(100),  -->
+<!--            border_color = "black", -->
+<!--            annotation_colors = list(DE = c("FALSE" = "grey50", -->
+<!--                                            "TRUE" = "red")), -->
+<!--            cellheight = 10,  -->
+<!--            fontsize = 8,  -->
+<!--            main = "KEGG_LYSOSOME", -->
+<!--            legend_breaks = c(seq(0, 12, by = 2), max(.)), -->
+<!--            legend_labels = c(seq(0, 12, by = 2), "Intensity\n"), -->
+<!--            annotation_col = toptable$KI %>% -->
+<!--              dplyr::select(SYMBOL, logFC, DE) %>% -->
+<!--              dplyr::filter(SYMBOL %in% KEGG$KEGG_LYSOSOME) %>% -->
+<!--              mutate(DE = as.character(DE)) %>% -->
+<!--              dplyr::distinct(SYMBOL, .keep_all = TRUE) %>% -->
+<!--              column_to_rownames("SYMBOL") -->
+<!--            ) -->
+<!-- dev.off() -->
+
+<!-- # work out how many clusters for kmeans -->
+<!-- #microglia -->
+<!-- enrichInput[cell_type_markers$`Microglia-enriched`, -->
+<!--             (targets %>% dplyr::filter(grepl(Genotype, pattern = "APP")) %>% .$sample)] %>%  -->
+<!--   na.omit() %>%  -->
+<!--   fviz_nbclust(kmeans, method = "wss") -->
+
+<!-- png("microglia.png") -->
+<!-- set.seed(1) -->
+<!-- enrichInput[cell_type_markers$`Microglia-enriched`, -->
+<!--             (targets %>% dplyr::filter(grepl(Genotype, pattern = "APP")) %>% .$sample)] %>%  -->
+<!--   na.omit() %>%  -->
+<!--   pheatmap(color = colorRampPalette(rev(brewer.pal(name = "Blues", n = 9)))(200), -->
+<!--            border_color = "black", -->
+<!--            kmeans_k = 4, -->
+<!--            cluster_rows = F, cluster_cols = F, -->
+<!--            cellheight = 20, cellwidth = 20, -->
+<!--            fontsize = 8,  -->
+<!--            main = "Microglia" -->
+<!--            ) -->
+<!-- dev.off() -->
+
+<!-- # neurons -->
+<!-- enrichInput[cell_type_markers$`Neuron-enriched`, -->
+<!--             (targets %>% dplyr::filter(grepl(Genotype, pattern = "APP")) %>% .$sample)] %>%  -->
+<!--   na.omit() %>%  -->
+<!--   fviz_nbclust(kmeans, method = "wss") -->
+
+<!-- png("neurons.png") -->
+<!-- set.seed(1) -->
+<!-- enrichInput[cell_type_markers$`Neuron-enriched`, -->
+<!--             (targets %>% dplyr::filter(grepl(Genotype, pattern = "APP")) %>% .$sample)] %>%  -->
+<!--   na.omit() %>%  -->
+<!--   pheatmap(color = colorRampPalette(rev(brewer.pal(name = "Blues", n = 9)))(200), -->
+<!--            border_color = "black", -->
+<!--            kmeans_k = 4, -->
+<!--            cluster_rows = F, cluster_cols = F, -->
+<!--            cellheight = 20, cellwidth = 20, -->
+<!--            fontsize = 8,  -->
+<!--            main = "Neurons" -->
+<!--            ) -->
+<!-- dev.off() -->
+
+<!-- # oligo -->
+
+<!-- enrichInput[cell_type_markers$`Oligodendrocyte-enriched`, -->
+<!--             (targets %>% dplyr::filter(grepl(Genotype, pattern = "APP")) %>% .$sample)] %>%  -->
+<!--   na.omit() %>%  -->
+<!--   fviz_nbclust(kmeans, method = "wss") -->
+
+<!-- png("Oligodendrocytes.png") -->
+<!-- set.seed(1) -->
+<!-- enrichInput[cell_type_markers$`Oligodendrocyte-enriched`, -->
+<!--             (targets %>% dplyr::filter(grepl(Genotype, pattern = "APP")) %>% .$sample)] %>%  -->
+<!--   na.omit() %>%  -->
+<!--   pheatmap(color = colorRampPalette(rev(brewer.pal(name = "Blues", n = 9)))(200), -->
+<!--            border_color = "black", -->
+<!--            kmeans_k = 4, -->
+<!--            cluster_rows = F, cluster_cols = F, -->
+<!--            cellheight = 20, cellwidth = 20, -->
+<!--            fontsize = 8,  -->
+<!--            main = "Oligodendrocytes" -->
+<!--            ) -->
+<!-- dev.off() -->
+
+<!-- # astrocytes -->
+<!-- enrichInput[cell_type_markers$`Astrocyte-enriched`, -->
+<!--             (targets %>% dplyr::filter(grepl(Genotype, pattern = "APP")) %>% .$sample)] %>%  -->
+<!--   na.omit() %>%  -->
+<!--   fviz_nbclust(kmeans, method = "wss") -->
+
+<!-- png("Astrocytes.png", pointsize = .1) -->
+<!-- set.seed(1) -->
+<!-- enrichInput[cell_type_markers$`Astrocyte-enriched`, -->
+<!--             (targets %>% dplyr::filter(grepl(Genotype, pattern = "APP")) %>% .$sample)] %>%  -->
+<!--   na.omit() %>%  -->
+<!--   pheatmap(color = colorRampPalette(rev(brewer.pal(name = "Blues", n = 9)))(200), -->
+<!--            border_color = "black", -->
+<!--            kmeans_k = 6, -->
+<!--            cluster_rows = F, cluster_cols = F, -->
+<!--            cellheight = 20, cellwidth = 20, -->
+<!--            fontsize = 8,  -->
+<!--            main = "Astrocytes" -->
+<!--            ) -->
+<!-- dev.off() -->
+<!-- ``` -->
+
+
