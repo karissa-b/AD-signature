@@ -1,3 +1,3 @@
 # Code
 
-Save command-line scripts and shared R code here.
+Command-line scripts for HPC are saved here. 

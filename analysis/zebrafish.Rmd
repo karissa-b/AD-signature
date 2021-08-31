@@ -24,40 +24,349 @@ library(magrittr)
 library(pheatmap)
 ```
 
-# Read in the HMP values from each study
+# annotations
 ```{r}
+ah <- AnnotationHub() %>%
+  subset(species == "Danio rerio") %>%
+  subset(dataprovider == "Ensembl") %>%
+  subset(rdataclass == "EnsDb")
+ensDb <- ah[["AH69169"]]
+genes <- genes(ensDb) %>% 
+  as_tibble
+```
+
+# gene sets
+```{r}
+KEGG <- 
+  msigdbr("Danio rerio", category = "C2", subcategory = "CP:KEGG") %>% 
+  left_join(genes %>% unchop(entrezid), by = c("entrez_gene" = "entrezid")) %>% 
+  dplyr::filter(!is.na(gene_id)) %>%
+  distinct(gs_name, gene_id, .keep_all = TRUE) %>% 
+  split(f = .$gs_name) %>%
+  lapply(extract2, "gene_id")
+```
+
+
+# Read in the HMP values from each zebrafish study
+```{r}
+
 HMP_q96_6m <- readRDS("data/zebrafish/R_objects/psen1Q96_HMP.rds") %>% 
   mutate(mutation = "Q96_K97del/+", 
          gene = "psen1") %>% 
   dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
 
 
-sorl1_2way_HMP <- readRDS("data/zebrafish/R_objects/sorl1_2way_HMP.rds") %>% 
+sorl1_2way_HMP <-readRDS("data/zebrafish/R_objects/sorl1_2way_HMP.rds") %>% 
   mutate(mutation = "W1818*/+", 
          gene = "sorl1") %>% 
   dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
 
 sorl14way_HMP <- readRDS("data/zebrafish/R_objects/sorl14way_HMP.rds") %>% 
-  mutate(mutation = case_when(coef == "R122Pfs/+" ~ "null/+", 
-                              TRUE ~ coef ), 
+  mutate(mutation = coef, 
          gene = "sorl1") %>% 
   dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
 
 
-psen2_HMP <- readRDS("data/zebrafish/R_objects/psen2_HMP.rds") %>% 
+psen2_HMP <- readRDS("data/zebrafish/R_objects/psen2_HMP.rds")%>% 
   mutate(mutation = case_when(coef == "FAD" ~ "T141_L142delinsMISLISV/+", 
-                              coef == "FS" ~ "null/+"
+                              coef == "FS" ~ "N140fs/+"
                             ), 
          gene = "psen2") %>% 
   dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
 
 psen1_T428del_HMP <- readRDS("data/zebrafish/R_objects/HMP_raw_KEGG_IRE.rds") %>% 
-  mutate(mutation = case_when(coef == "fAI-like/+" ~ "W233fs/+", 
+  mutate(mutation = case_when(coef == "fAI-like/+" ~ "fAI-like/+", 
                               coef == "EOfAD-like/+" ~ "T428del/+"
   ), 
   gene = "psen1") %>% 
   dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
+
+psen1_K97fs_HMP <- readRDS("data/zebrafish/R_objects/k97_HMP.rds") %>% 
+  mutate(mutation = "K97fs/+", 
+         gene = "psen1") %>% 
+  dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
+
+Q96_hyp_HMP <- readRDS("~/Documents/AD-signature/data/zebrafish/R_objects/Q96_hyp_HMP.rds") %>% 
+   mutate(mutation = "Q96_K97del/+ (hypoxia)", 
+         gene = "psen1") %>% 
+  dplyr::select(pathway, harmonic_p, harmonic_p_FDR, mutation, gene)
+
+HMP_all <- 
+  HMP_q96_6m %>% 
+  bind_rows(sorl1_2way_HMP) %>% 
+  bind_rows(sorl14way_HMP) %>% 
+  bind_rows(psen1_T428del_HMP) %>% 
+  bind_rows(psen2_HMP) %>% 
+  bind_rows(psen1_K97fs_HMP) %>%
+  bind_rows(Q96_hyp_HMP) %>% 
+  mutate(`EOfAD-like` = case_when(
+    mutation %in% c("N140fs/+", "fAI-like/+", "K97fs/+") ~ "No",
+    TRUE ~ "Yes"
+  )
+  ) 
+
+sigpaths <- HMP_all %>% 
+  dplyr::filter(harmonic_p_FDR < 0.05) %>% 
+  .$pathway %>% 
+  unique
+
+# plot heatmap
+anno_mut <- 
+  HMP_all %>% 
+  dplyr::select(mutation, gene, `EOfAD-like`) %>% 
+  unique %>% 
+  mutate(Experiment = case_when(
+    mutation %in% c("R122Pfs/+", "trans", "V1482Afs/+") ~ "Experiment 1", 
+    mutation %in% c("T428del/+", "fAI-like/+") ~ "Experiment 2",
+    grepl(mutation, pattern = "Q96_K97del/+") ~ "Experiment 3",
+    mutation %in% c("W1818*/+") ~ "Experiment 4",
+    mutation %in% c("N140fs/+", "T141_L142delinsMISLISV/+") ~ "Experiment 5",
+    mutation %in% "K97fs/+" ~ "Experiment 6"
+  )) %>% 
+  column_to_rownames("mutation") 
+
+sig_in_morethan1 <- 
+  HMP_all %>% 
+  dplyr::filter(grepl(pathway, pattern = "^KEGG_|^ire")) %>% 
+  dplyr::filter(pathway %in% sigpaths) %>% 
+  group_by(pathway) %>% 
+  count(harmonic_p_FDR < 0.05 ) %>% 
+  dplyr::filter(`harmonic_p_FDR < 0.05` == "TRUE" & n >= 2) %>% 
+  .$pathway
+
+anno_hmp <- 
+  HMP_all %>% 
+  dplyr::filter(pathway %in% sigpaths) %>% 
+  dplyr::filter(pathway %in% sig_in_morethan1) %>% 
+  dplyr::select(pathway, harmonic_p_FDR, mutation) %>% 
+  mutate(harmonic_p_FDR = signif(harmonic_p_FDR, 2)) %>% 
+  dplyr::filter(grepl(pathway, pattern = "^KEGG_|^ire")) %>% 
+  spread(key = "mutation", value = "harmonic_p_FDR") %>% 
+  column_to_rownames("pathway")
+
+# png("output/HMP.png")
+HMP_all %>% 
+  dplyr::select(pathway, harmonic_p_FDR, mutation) %>% 
+  dplyr::filter(grepl(pathway, pattern = "^KEGG_|^ire")) %>% 
+  dplyr::filter(pathway %in% sig_in_morethan1) %>% 
+  spread(key = "mutation", value = "harmonic_p_FDR") %>% 
+  column_to_rownames("pathway") %>% 
+  pheatmap(color = viridis::viridis_pal(option = "viridis", begin = 1, end = 0)(200), 
+           # cluster_cols = TRUE,
+           gaps_row = 3,
+           display_numbers = anno_hmp, 
+           clustering_method = "complete",
+           border_color = "black",
+           number_format = "%.2f" ,
+           # number_color = "red",
+           annotation_col = anno_mut,
+           annotation_colors = list(
+             `EOfAD-like` = c("Yes" = "firebrick3",
+                              "Complex" = "grey25",
+                              "No" = "turquoise4"),
+             gene = c("psen1" = "seagreen2",
+                      "psen2" = "orange2",
+                      "sorl1" = "plum4")
+           )
+  )
+#dev.off()
+
 ```
+
+# Heatmap of oxphos
+
+```{r}
+logFCs <-
+read_csv("data/zebrafish/R_objects/Normoxia_Q96mutant_vs_wt_limma (1).csv") %>% 
+  mutate(mutation = "psen1 Q96_K97del/+", 
+         gene = "psen1") %>% 
+  dplyr::select(gene_id = ensembl, logFC, FDR, mutation, gene) %>% 
+  bind_rows(
+    topTable(readRDS("data/zebrafish/R_objects/Q96fit.rds"), 
+             n = Inf, 
+             coef = "hyp_6m_mutvWT") %>% 
+      dplyr::select(gene_id = ensembl_gene_id , logFC, FDR = adj.P.Val) %>% 
+      mutate(mutation = "psen1 Q96_K97del/+ (hypoxia)", 
+             gene = "psen1")
+  ) %>% 
+  bind_rows(
+    readRDS("data/zebrafish/R_objects/sorl1_4way_toptable.rds") %>% 
+      bind_rows() %>% 
+      dplyr::select(gene_id, logFC, FDR, mutation = coef) %>% 
+      mutate( mutation = paste("sorl1", mutation),
+        gene = "sorl1"
+             )
+  ) %>% 
+  bind_rows(
+    readRDS("data/zebrafish/R_objects/sorl1_2way_toptable.rds") %>% 
+      bind_rows() %>% 
+      dplyr::select(gene_id, logFC, FDR) %>% 
+      mutate(mutation = "sorl1 W1818*/+", 
+             gene = "sorl1")
+  ) %>% 
+  bind_rows(
+    readRDS("data/zebrafish/R_objects/psen2_toptableRUV.rds") %>% 
+      bind_rows() %>% 
+      left_join(genes %>% as_tibble()) %>% 
+      dplyr::select(gene_id, logFC, FDR, mutation = "coef") %>% 
+      mutate(gene = "psen2", 
+             mutation = case_when(
+               mutation == "FS" ~ "psen2 N140fs/+", 
+               mutation == "FAD" ~ "psen2 T141_L142delinsMISLISV/+"
+             ))
+  ) 
+  bind_rows(
+    readRDS("data/zebrafish/R_objects/psen1_3way_toptable.rds") %>% 
+      bind_rows() %>% 
+      dplyr::select(gene_id, logFC, FDR, mutation = "coef") %>% 
+      mutate(gene = "psen1", 
+             mutation = case_when(
+               mutation == "EOfAD-like/+" ~ "psen1 T428del/+", 
+               mutation == "fAI-like/+" ~ "psen1 W233fs/+"
+             ))
+  )
+  bind_rows(K97.de.res %>% 
+              mutate(mutation = "psen1 K97fs/+", 
+                     gene = "psen1") %>% 
+              dplyr::select(gene_id, logFC, FDR, mutation, gene)
+            ) 
+
+oxphos_anno <- KEGG$KEGG_OXIDATIVE_PHOSPHORYLATION %>% 
+  as_tibble() %>% 
+  set_colnames("gene_id") %>% 
+  left_join(genes) %>% 
+  dplyr::select(gene_name, description) %>% 
+  dplyr::distinct(gene_name, .keep_all = TRUE) %>% 
+  mutate(complex = case_when(
+    grepl(description, pattern = "NADH") ~ "Complex I", 
+    grepl(description, pattern = "NDUFA4") ~ "Complex I", 
+    grepl(description, pattern = "succinate dehydrogenase complex, subunit") ~ "Complex II",
+    grepl(description, pattern = "ubiquinol-cytochrome c") ~ "Complex III", 
+    grepl(description, pattern = "cytochrome c-1") ~ "Complex III", 
+    grepl(description, pattern = "cytochrome b, mitochondrial") ~ "Complex III", 
+    grepl(description, pattern = "cytochrome c oxidase subunit") ~ "Complex IV", 
+    gene_name %in% c("cox10", "cox11", "cox15", "cox17") ~ "Complex IV", 
+    grepl(gene_name, pattern = "mt-co") ~ "Complex IV", 
+    grepl(gene_name, pattern = "COX5B") ~ "Complex IV", 
+    grepl(description, pattern = "ATP") ~ "Complex V", 
+  )
+  ) %>% 
+  dplyr::select(-description) %>% 
+  column_to_rownames("gene_name")
+
+oxphos_anno_list <- oxphos_anno %>% 
+  rownames_to_column("gene_name") %>% 
+  split(f = .$complex) %>% 
+  lapply(magrittr::extract2, "gene_name")
+
+oxphos_anno_colours <- brewer.pal(name = "Set1", n = 5)
+names(oxphos_anno_colours) <- names(oxphos_anno_list) 
+oxphos_anno_colours <- list(complex = oxphos_anno_colours)
+
+# png("output/oxphos.png", width = 18, height = 20, units = "cm", res = 1000)  
+logFCs %>%   
+  dplyr::filter(gene_id %in% KEGG$KEGG_OXIDATIVE_PHOSPHORYLATION) %>% 
+  left_join(genes %>% as_tibble()) %>% 
+  dplyr::distinct(gene_name, mutation, .keep_all = TRUE) %>% 
+  dplyr::select(gene_name, logFC, mutation) %>% 
+  spread(key = "mutation", value = "logFC") %>% 
+  na.omit %>% 
+  column_to_rownames("gene_name") %>% 
+  .[c(oxphos_anno_list$`Complex I`, 
+      oxphos_anno_list$`Complex II`,
+      oxphos_anno_list$`Complex III`,
+      oxphos_anno_list$`Complex IV`,
+      oxphos_anno_list$`Complex V`
+      ), ] %>% 
+  na.omit() %>% #.[c(oxphos_anno_list$`Complex I`, oxphos_anno_list$`Complex II`, oxphos_anno_list$`Complex III`),] %>% dim
+  pheatmap(color = colorRampPalette(rev(brewer.pal(n = 11, 
+                                                    name = "RdBu")))(100), 
+           height = 10,
+           cellwidth = 20,
+           # cellheight = 7,
+           cluster_rows = FALSE,
+           angle_col = 315,
+           border_color = "black",
+           annotation_row = oxphos_anno,
+           annotation_colors = oxphos_anno_colours,
+           gaps_row = c(40, 44, 52, 71),
+           show_rownames = FALSE,
+           breaks =  seq(-0.5, 0.5, length.out = 100),
+           main = "KEGG_OXIDATIVE_PHOSPHORYLATION")
+# dev.off()  
+```
+
+# Heatmap of ribosome gene expression
+
+```{r}
+ribo_anno_list <- 
+  KEGG$KEGG_RIBOSOME %>% 
+  as_tibble() %>% 
+  set_colnames("gene_id") %>% 
+  left_join(genes) %>% 
+  dplyr::select(gene_name, description) %>% 
+  dplyr::distinct(gene_name, .keep_all = TRUE) %>% 
+  mutate(subunit = case_when(
+    grepl(description, pattern = "ribosomal protein L") ~ "Large subunit",
+    grepl(description, pattern = "large") ~ "Large subunit",
+    grepl(gene_name, pattern = "rsl24d1") ~ "Large subunit",
+    grepl(gene_name, pattern = "uba52") ~ "Large subunit",
+    grepl(description, pattern = "ribosomal protein S") ~ "Small subunit",
+    grepl(gene_name, pattern = "fau") ~ "Small subunit",
+    grepl(gene_name, pattern = "RPS17") ~ "Small subunit"
+  )) %>% 
+  dplyr::select(-description) %>% 
+  split(f = .$subunit) %>% 
+  lapply(magrittr::extract2, "gene_name")
+
+ribo_anno <- 
+  KEGG$KEGG_RIBOSOME %>% 
+  as_tibble() %>% 
+  set_colnames("gene_id") %>% 
+  left_join(genes) %>% 
+  dplyr::select(gene_name, description) %>% 
+  dplyr::distinct(gene_name, .keep_all = TRUE) %>% 
+  mutate(subunit = case_when(
+    grepl(description, pattern = "ribosomal protein L") ~ "Large subunit",
+    grepl(description, pattern = "large") ~ "Large subunit",
+    grepl(gene_name, pattern = "rsl24d1") ~ "Large subunit",
+    grepl(gene_name, pattern = "uba52") ~ "Large subunit",
+    grepl(description, pattern = "ribosomal protein S") ~ "Small subunit",
+    grepl(gene_name, pattern = "fau") ~ "Small subunit",
+    grepl(gene_name, pattern = "RPS17") ~ "Small subunit"
+  )) %>% 
+  dplyr::select(-description) %>% 
+  column_to_rownames("gene_name")
+
+png("output/ribo.png", width = 18, height = 20, units = "cm", res = 1000)  
+logFCs %>%   
+  dplyr::filter(gene_id %in% KEGG$KEGG_RIBOSOME) %>% 
+  left_join(genes %>% as_tibble()) %>% 
+  dplyr::distinct(gene_name, mutation, .keep_all = TRUE) %>% 
+  dplyr::select(gene_name, logFC, mutation) %>% 
+  spread(key = "mutation", value = "logFC") %>% 
+  column_to_rownames("gene_name") %>% 
+  .[c(ribo_anno_list$`Large subunit`, ribo_anno_list$`Small subunit`),] %>% 
+  na.omit %>% 
+  pheatmap(color = colorRampPalette(rev(brewer.pal(n = 11, 
+                                                    name = "RdBu")))(100), 
+           height = 10,
+           cellwidth = 20,
+           cluster_rows = FALSE,
+           annotation_row = ribo_anno,
+           angle_col = 315,
+           gaps_row = 47,
+           border_color = NA,
+           show_rownames = FALSE,
+           breaks =  seq(-0.5, 0.5, length.out = 100),
+           main = "KEGG_RIBOSOME")
+dev.off()
+```
+
+
+
+
+
 
 
 
