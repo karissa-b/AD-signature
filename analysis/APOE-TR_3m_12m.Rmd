@@ -51,7 +51,7 @@ library(ggsci)
 # We will use a function by Ben Marwick for raincloud plots
 # This code loads the function in the working environment
 source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
-
+theme_set(theme_bw())
 ```
 
 ## annotations
@@ -116,7 +116,9 @@ gc_len <- mcols(tr) %>%
 
 
 ```{r}
-counts_zhaeoetal <- read_tsv("data/APOE-TR/04_featurecounts_zhaoetal/featureCounts_q10_ensRelease98.txt", skip = 1) %>% 
+# read in count data
+counts_zhaeoetal <- read_tsv("data/APOE-TR/04_featurecounts_zhaoetal/featureCounts_q10_ensRelease98.txt",
+                             skip = 1) %>% 
   dplyr::select(-c(Chr, Start, End, Strand, Length)) %>% 
   column_to_rownames("Geneid")
 
@@ -194,14 +196,14 @@ beforecorrect_sex <-
   gather(key = "sample", value = "counts", starts_with("A")) %>% 
   left_join(meta_zhaoetal) %>% 
   dplyr::filter(Age == "3M") %>% 
-    left_join(gc_len %>% 
-                as.data.frame() %>% 
-                rownames_to_column("gene_id") %>%  
-                dplyr::select(gene_id, gene_name)) %>% 
-    dplyr::select(gene_name, sample, Sex, counts) %>% 
-    ggplot(aes(x = sample, y = counts, fill = Sex)) +
-    geom_boxplot(outlier.shape = NA, alpha = 0.8) +
-    facet_wrap(~Sex, ncol = 1, scales = "free") +
+  left_join(gc_len %>% 
+              as.data.frame() %>% 
+              rownames_to_column("gene_id") %>%  
+              dplyr::select(gene_id, gene_name)) %>% 
+  dplyr::select(gene_name, sample, Sex, counts) %>% 
+  ggplot(aes(x = sample, y = counts, fill = Sex)) +
+  geom_boxplot(outlier.shape = NA, alpha = 0.8) +
+  facet_wrap(~Sex, ncol = 1, scales = "free") +
   theme_bw() +
   easy_rotate_x_labels(angle = 315) +
   theme(legend.position = "none")
@@ -222,7 +224,6 @@ meta_zhaoetal %<>%
     TRUE ~ Sex
   ), 
   Sex = as.factor(Sex)) 
-
 
 # Then fix the group factor in the metadata spreadhset
 
@@ -313,42 +314,42 @@ a <-
 
 
 ggarrange(a, 
-           cpm(x_zhaoetal, log = TRUE) %>%
-             as.data.frame() %>%
-             pivot_longer(
-               cols = everything(),
-               names_to = "sample",
-               values_to = "logCPM"
-             ) %>% 
-             split(f = .$sample) %>%
-             lapply(function(y){
-               d <- density(y$logCPM)
-               tibble(
-                 sample = unique(y$sample),
-                 x = d$x,
-                 y = d$y
-               )
-             }) %>%
-             bind_rows() %>%
-             left_join(x_zhaoetal$samples) %>%
-             ggplot(aes(x, y, colour = Genotype, group = sample)) +
+          cpm(x_zhaoetal, log = TRUE) %>%
+            as.data.frame() %>%
+            pivot_longer(
+              cols = everything(),
+              names_to = "sample",
+              values_to = "logCPM"
+            ) %>% 
+            split(f = .$sample) %>%
+            lapply(function(y){
+              d <- density(y$logCPM)
+              tibble(
+                sample = unique(y$sample),
+                x = d$x,
+                y = d$y
+              )
+            }) %>%
+            bind_rows() %>%
+            left_join(x_zhaoetal$samples) %>%
+            ggplot(aes(x, y, colour = Genotype, group = sample)) +
             geom_line() +
             labs(
               x = "logCPM",
               y = "Density",
-               colour = "Genotype"
-             ) +
-             scale_color_viridis_d(option = "plasma", end = 0.8) +
-             ggtitle("After filtering") +
-             theme_bw(), 
-           common.legend = TRUE, 
+              colour = "Genotype"
+            ) +
+            scale_color_viridis_d(option = "plasma", end = 0.8) +
+            ggtitle("After filtering") +
+            theme_bw(), 
+          common.legend = TRUE, 
           labels = "AUTO") 
 #ggsave("plotsforpub/filtering.png", width = 15, height = 5, units = "cm", scale = 1.4)
 ```
 
 
 # PCA on entire dataset
-          
+
 ```{r}
 ggarrange(
   x_zhaoetal %>% 
@@ -384,22 +385,21 @@ ggarrange(
   common.legend = F, 
   labels = "AUTO"
 )
- # ggsave("plotsforpub/PCA_all.png", width = 18, height = 8, units = "cm", scale = 1.4)
+# ggsave("plotsforpub/PCA_all.png", width = 18, height = 8, units = "cm", scale = 1.4)
 
- x_zhaoetal %>% 
-    cpm(log = TRUE) %>% 
-    t() %>% 
-    prcomp() %>%
-    autoplot(data = tibble(sample = rownames(.$x)) %>%
-               left_join(x_zhaoetal$samples),
-             colour = "lane", 
-             shape = "Genotype", 
-             size = 4
-    ) +
-    theme_bw() +
-    scale_color_d3()
-    theme(legend.position = "left")
-  
+x_zhaoetal %>% 
+  cpm(log = TRUE) %>% 
+  t() %>% 
+  prcomp() %>%
+  autoplot(data = tibble(sample = rownames(.$x)) %>%
+             left_join(x_zhaoetal$samples),
+           colour = "lane", 
+           shape = "Genotype", 
+           size = 4
+  ) +
+  theme_bw() +
+  scale_color_d3()
+
 allsampHM <- cpm(x_zhaoetal, log = TRUE) %>% 
   t() %>% 
   dist(method = "euclidean") %>% 
@@ -408,17 +408,24 @@ allsampHM <- cpm(x_zhaoetal, log = TRUE) %>%
 allsampHM_anno <-  tibble(
   sample = colnames(allsampHM)) %>% 
   left_join(x_zhaoetal$samples) %>% 
-  dplyr::select(sample, Genotype, Sex , litter = dateBirth) %>% 
+  dplyr::select(sample, Genotype, Sex , litter = dateBirth, lane) %>% 
   column_to_rownames("sample")
+
 
 newCols <- colorRampPalette(brewer.pal(name = "Paired", 
                                        n = length(unique(allsampHM_anno$litter))))
 mycolors <- newCols(length(unique(allsampHM_anno$litter)))
 names(mycolors) <- unique(allsampHM_anno$litter)
 
+newCol2 <- colorRampPalette(brewer.pal(name = "Paired", 
+                                       n = length(unique(allsampHM_anno$lane))))
+mycolors2 <- newCol2(length(unique(allsampHM_anno$lane)))
+names(mycolors2) <- unique(allsampHM_anno$lane)
+
 
 mycolors <- list(litter = mycolors, 
                  Sex = c("male" = "blue", "female" = "red"), 
+                 lane = mycolors2,
                  Genotype = c("APOE3" = "black", "APOE2" = "grey75", "APOE4" = "grey35"))  
 
 #png("plotsforpub/sampleheatmap.png", width = 1000, height = 1000, res = 100)
@@ -735,42 +742,42 @@ toptables_cqn %>%
   #ggsave("plotsforpub/cqn_noDEgenes.png", width = 10, height = 5, units = "cm", dpi = 800, scale = 2)
 
 ggarrange(
-ggarrange(toptables_cqn %>% 
-  bind_rows() %>% 
-  mutate(rankstat = sign(logFC)*-log10(PValue)) %>% 
-  ggplot(aes(x = meanGC, y = rankstat)) +
-  geom_point(alpha = 0.5, 
-             aes(colour = DE)) +
-  coord_cartesian(ylim = c(-20, 20)) +
-  facet_wrap(~coef, scales = "free") +
-  scale_color_manual(values = c("grey50", "red")) +
-  theme_bw() + 
-    labs(x = "Weighted average %GC per gene", 
-         y = "sign(logFC)*-log10(PValue)", 
-         colour = "Differentially expxressed?") +
-  geom_smooth(se = F),
-
-toptables_cqn %>% 
-  bind_rows() %>% 
-  mutate(rankstat = sign(logFC)*-log10(PValue)) %>% 
-  ggplot(aes(x = len, y = rankstat)) +
-  geom_point(alpha = 0.5, 
-             aes(colour = DE)) +
-  coord_cartesian(ylim = c(-20, 20)) +
-  scale_x_log10() +
-  facet_wrap(~ coef, scales = "free") +
-  scale_color_manual(values = c("grey50", "red")) +
-  theme_bw() + 
-      labs(x = "Average transcript length per gene ", 
-         y = "sign(logFC)*-log10(PValue)", 
-         colour = "Differentially expxressed?") +
-  geom_smooth(se = F), 
-labels = c("B", "C"), 
-nrow = 1,
-common.legend = TRUE
-) ,  
-ggarrange(
-toptables_cqn %>% 
+  ggarrange(toptables_cqn %>% 
+              bind_rows() %>% 
+              mutate(rankstat = sign(logFC)*-log10(PValue)) %>% 
+              ggplot(aes(x = meanGC, y = rankstat)) +
+              geom_point(alpha = 0.5, 
+                         aes(colour = DE)) +
+              coord_cartesian(ylim = c(-20, 20)) +
+              facet_wrap(~coef, scales = "free") +
+              scale_color_manual(values = c("grey50", "red")) +
+              theme_bw() + 
+              labs(x = "Weighted average %GC per gene", 
+                   y = "sign(logFC)*-log10(PValue)", 
+                   colour = "Differentially expxressed?") +
+              geom_smooth(se = F),
+            
+            toptables_cqn %>% 
+              bind_rows() %>% 
+              mutate(rankstat = sign(logFC)*-log10(PValue)) %>% 
+              ggplot(aes(x = len, y = rankstat)) +
+              geom_point(alpha = 0.5, 
+                         aes(colour = DE)) +
+              coord_cartesian(ylim = c(-20, 20)) +
+              scale_x_log10() +
+              facet_wrap(~ coef, scales = "free") +
+              scale_color_manual(values = c("grey50", "red")) +
+              theme_bw() + 
+              labs(x = "Average transcript length per gene ", 
+                   y = "sign(logFC)*-log10(PValue)", 
+                   colour = "Differentially expxressed?") +
+              geom_smooth(se = F), 
+            labels = c("B", "C"), 
+            nrow = 1,
+            common.legend = TRUE
+  ) ,  
+  ggarrange(
+    toptables_cqn %>% 
   bind_rows() %>% 
    mutate(Sex = case_when(
     grepl(coef, pattern = "Male") ~ "male", 
@@ -835,6 +842,18 @@ KEGG <- msigdbr("Mus musculus", category = "C2", subcategory = "CP:KEGG")  %>%
   split(f = .$gs_name) %>%
   lapply(extract2, "gene_id")
 
+kegg2keep <- KEGG %>% 
+  lapply(length) %>% 
+  unlist %>% 
+  as.data.frame() %>% 
+  rownames_to_column("pathway") %>% 
+  as_tibble() %>% 
+  set_colnames(c("pathway", "number")) %>% 
+  dplyr::filter(number > 10) %>% 
+  .$pathway
+
+KEGG <- KEGG[kegg2keep]  
+  
 ireGenes <- 
   read_excel("data/ireGenes.xlsx", sheet = "Mouse IREs") %>% 
     gather(key = "ire", value = "gene_id") %>% 
@@ -875,7 +894,7 @@ goseq_res <- pwfs %>%
     goseq(x, gene2cat = c(KEGG, ireGenes)) %>% 
       as_tibble %>%
       dplyr::filter(numDEInCat > 0) %>%
-      mutate(FDR = p.adjust(over_represented_pvalue, method = "fdr")) %>% 
+      mutate(FDR = p.adjust(over_represented_pvalue, method = "BH")) %>% 
       dplyr::select(-under_represented_pvalue) 
   }) 
 
@@ -1107,21 +1126,82 @@ list(
 <!--  setwd("~/Documents/apoe") -->
 <!-- ``` -->
 
-## KEGG ribo pheatmap
-
+## KEGG oxphos heatmap
 ```{r}
-#png("plotsforpub/kegg_ribo.png", width = 35, height = 20, units = "cm", res = 800)
+
+oxphosAnno <- KEGG$KEGG_OXIDATIVE_PHOSPHORYLATION %>% 
+  as_tibble() %>% 
+  set_colnames("gene_id") %>% 
+  left_join(gn %>% as_tibble()) %>% 
+  dplyr::select(gene_name, description) %>%
+  dplyr::distinct(gene_name, .keep_all = TRUE) %>% 
+  mutate(complex = case_when(
+    
+    # Complex I
+    grepl(description, pattern = "NADH") ~ "Complex I", 
+    grepl(description, pattern = "Ndufa4") ~ "Complex I", 
+    
+    # Complex II
+    grepl(description, pattern = "succinate dehydrogenase complex, subunit") ~ "Complex II",
+    
+    # Complex III
+    grepl(description, pattern = "ubiquinol-cytochrome c") ~ "Complex III", 
+    grepl(description, pattern = "ubiquinol cytochrome c") ~ "Complex III", 
+    grepl(description, pattern = "cytochrome c-1") ~ "Complex III", 
+    grepl(description, pattern = "cytochrome b, mitochondrial") ~ "Complex III", 
+    grepl(description, pattern = "mitochondrially encoded cytochrome b") ~ "Complex III", 
+    
+    # Complex IV
+    grepl(description, pattern = "cytochrome c oxidase subunit") ~ "Complex IV",
+    grepl(description, pattern = "cytochrome c") ~ "Complex IV",
+    gene_name %in% c("Cox10", "Cox11", "Cox15", "Cox17") ~ "Complex IV", 
+    grepl(gene_name, pattern = "mt-Co") ~ "Complex IV", 
+    grepl(gene_name, pattern = "COX5B") ~ "Complex IV", 
+    
+    
+    # Complex V
+    grepl(description, pattern = "ATP") ~ "Complex V", 
+  )
+  ) %>% 
+  dplyr::select(-description) 
+
+oxphos_anno_row <- 
+  toptables_cqn %>% 
+  bind_rows() %>% 
+  dplyr::filter(gene_id %in% KEGG$KEGG_OXIDATIVE_PHOSPHORYLATION) %>% 
+  dplyr::select(gene_name, DE, coef) %>% 
+  left_join(oxphosAnno) %>% 
+  mutate(coef = str_replace(coef, pattern = "2", replacement = "APOE2"), 
+         coef = str_replace(coef, pattern = "3", replacement = "APOE3"), 
+         coef = str_replace(coef, pattern = "4", replacement = "APOE4"), 
+         coef =  str_replace(coef, pattern = "v", replacement = " v "), 
+         DE = as.character(DE)
+  ) %>% 
+  spread(key = "coef", value = "DE") %>% 
+  column_to_rownames("gene_name") %>% 
+  dplyr::select(complex, everything())
+
+row_order_oxphos <- oxphos_anno_row %>% 
+  rownames_to_column("gene_name") %>% 
+  arrange(complex) %>% 
+  .$gene_name
+
+#png("output/apoe/kegg_oxphos landscape.png", width = 60, height = 22, units = "cm", res = 400)
 toptables_cqn %>% 
   bind_rows() %>% 
-  dplyr::filter(gene_id %in% KEGG$KEGG_RIBOSOME) %>%
+  dplyr::filter(gene_id %in% KEGG$KEGG_OXIDATIVE_PHOSPHORYLATION) %>%
   dplyr::select(gene_name, coef, logFC) %>% 
   spread(key = "coef", value = logFC) %>% 
   column_to_rownames("gene_name") %>% 
+  .[row_order_oxphos,] %>% 
   t() %>% 
-  pheatmap(color = colorRampPalette(rev(brewer.pal(n = 7, name =
+  pheatmap(cluster_cols = FALSE,
+           color = colorRampPalette(rev(brewer.pal(n = 7, name =
                                                      "RdBu")))(100), 
            breaks = c(seq(min(.), 0, length.out=ceiling(100/2) + 1), 
-                      seq(max(.)/100, max(.), length.out=floor(100/2))), 
+                      seq(max(.)/100, max(.), length.out=floor(100/2))),
+           gaps_col = c(39, 43, 53, 70, 103),
+           annotation_col = oxphos_anno_row,
            annotation_row = tibble(comparison = rownames(.)) %>% 
              mutate(Sex = case_when(
                grepl(comparison, pattern = "Male") ~ "male", 
@@ -1131,10 +1211,154 @@ toptables_cqn %>%
                grepl(comparison, pattern = "4v3") ~ "APOE4 v APOE3", 
                grepl(comparison, pattern = "2v3") ~ "APOE2 v APOE3", 
              )) %>% 
+             column_to_rownames("comparison"),
+           annotation_colors = list("Male APOE4 v APOE3" = c("FALSE" = "#43373F", 
+                                                             "TRUE" = "#99E1D9"), 
+                                    "Male APOE2 v APOE3" = c("FALSE" = "#43373F", 
+                                                             "TRUE" = "#99E1D9"), 
+                                    "Female APOE4 v APOE3" = c("FALSE" = "#43373F", 
+                                                               "TRUE" = "#99E1D9"), 
+                                    "Female APOE2 v APOE3" = c("FALSE" = "#43373F", 
+                                                               "TRUE" = "#99E1D9"), 
+                                    APOE = c( "APOE2 v APOE3" = "#E3D3B5", 
+                                              "APOE4 v APOE3" = "#2E294E"), 
+                                    Sex = c(male = "black", 
+                                            female = "grey50")
+           ),
+           cellheight = 30, 
+           cellwidth = 10,
+           fontsize_col = 8,
+           fontsize_row = 16,
+           show_colnames = TRUE,
+           angle_col = 315,
+           
+           border_color = NA, 
+           main = "KEGG_OXIDATIVE_PHOSPHORYLATION\n"
+           
+  )
+
+#dev.off()
+```
+
+
+## KEGG ribo pheatmap
+
+```{r}
+annoribo <- KEGG$KEGG_RIBOSOME %>% 
+  as_tibble() %>% 
+  set_colnames("gene_id") %>% 
+  left_join(gn %>% as_tibble()) %>% 
+  dplyr::select(gene_name, description) %>% 
+  dplyr::distinct(gene_name, .keep_all = TRUE) %>% 
+  mutate(subunit = case_when(
+    grepl(description, pattern = "ribosomal protein L") ~ "Large subunit",
+    grepl(description, pattern = "large") ~ "Large subunit",
+    grepl(gene_name, pattern = "Rsl24d1") ~ "Large subunit",
+    grepl(gene_name, pattern = "Uba52") ~ "Large subunit",
+    grepl(description, pattern = "ribosomal protein S") ~ "Small subunit",
+    grepl(gene_name, pattern = "Fau") ~ "Small subunit",
+    grepl(gene_name, pattern = "RPS17") ~ "Small subunit"
+  )) %>% 
+  dplyr::select(-description) 
+
+annoribo <- toptables_cqn %>% 
+  bind_rows() %>% 
+  dplyr::filter(gene_id %in% KEGG$KEGG_RIBOSOME) %>% 
+  dplyr::select(gene_name, DE, coef) %>% 
+  left_join(annoribo) %>% 
+  mutate(coef = str_replace(coef, pattern = "2", replacement = "APOE2"), 
+         coef = str_replace(coef, pattern = "3", replacement = "APOE3"), 
+         coef = str_replace(coef, pattern = "4", replacement = "APOE4"), 
+         coef =  str_replace(coef, pattern = "v", replacement = " v "), 
+         DE = as.character(DE)
+  ) %>% 
+  spread(key = "coef", value = "DE") %>% 
+  column_to_rownames("gene_name")   
+
+orderRibo <- annoribo %>% 
+  rownames_to_column("gene_name") %>% 
+  arrange(subunit) %>% 
+  .$gene_name
+
+png("output/apoe/kegg_ribo landscape.png", width = 60, height = 22, units = "cm", res = 400)
+toptables_cqn %>% 
+  bind_rows() %>% 
+  dplyr::filter(gene_id %in% KEGG$KEGG_RIBOSOME) %>%
+  dplyr::select(gene_name, coef, logFC) %>% 
+  spread(key = "coef", value = logFC) %>% 
+  column_to_rownames("gene_name") %>% 
+  .[orderRibo,] %>% 
+  t() %>% 
+  pheatmap(cluster_cols = FALSE,
+           color = colorRampPalette(rev(brewer.pal(n = 7, name =
+                                                     "RdBu")))(100), 
+           breaks = c(seq(min(.), 0, length.out=ceiling(100/2) + 1), 
+                      seq(max(.)/100, max(.), length.out=floor(100/2))),
+           annotation_col = annoribo,
+           annotation_row = tibble(comparison = rownames(.)) %>%
+             mutate(Sex = case_when(
+               grepl(comparison, pattern = "Male") ~ "male",
+               grepl(comparison, pattern = "Female") ~ "female",
+             ),
+             APOE = case_when(
+               grepl(comparison, pattern = "4v3") ~ "APOE4 v APOE3",
+               grepl(comparison, pattern = "2v3") ~ "APOE2 v APOE3",
+             )) %>%
+             column_to_rownames("comparison"),
+           annotation_colors = list("Male APOE4 v APOE3" = c("FALSE" = "#43373F", 
+                                                             "TRUE" = "#99E1D9"), 
+                                    "Male APOE2 v APOE3" = c("FALSE" = "#43373F", 
+                                                             "TRUE" = "#99E1D9"), 
+                                    "Female APOE4 v APOE3" = c("FALSE" = "#43373F", 
+                                                               "TRUE" = "#99E1D9"), 
+                                    "Female APOE2 v APOE3" = c("FALSE" = "#43373F", 
+                                                               "TRUE" = "#99E1D9"), 
+                                    APOE = c( "APOE2 v APOE3" = "#E3D3B5", 
+                                              "APOE4 v APOE3" = "#2E294E"), 
+                                    Sex = c(male = "black", 
+                                            female = "grey50")
+           ),
+           cellheight = 30, 
+           cellwidth = 10,
+           fontsize_col = 8,
+           fontsize_row = 16,
+           show_colnames = TRUE,
+           angle_col = 315,
+           border_color = NA, 
+           main = "KEGG_Ribosome\n"
+           
+  )
+
+dev.off()
+  
+```
+
+## KEGG mtor pheatmap
+```{r}
+png("output/apoe/kegg_mtor.png", width = 15, height = 30, units = "cm", res = 400)
+toptables_cqn %>% 
+  bind_rows() %>% 
+  dplyr::filter(gene_id %in% KEGG$KEGG_MTOR_SIGNALING_PATHWAY) %>%
+  dplyr::select(gene_name, coef, logFC) %>% 
+  spread(key = "coef", value = logFC) %>% 
+  column_to_rownames("gene_name") %>% 
+  pheatmap(color = colorRampPalette(rev(brewer.pal(n = 7, name =
+                                                     "RdBu")))(100), 
+           breaks = c(seq(min(.), 0, length.out=ceiling(100/2) + 1), 
+                      seq(max(.)/100, max(.), length.out=floor(100/2))), 
+           annotation_col = tibble(comparison = colnames(.)) %>% 
+             mutate(Sex = case_when(
+               grepl(comparison, pattern = "Male") ~ "male", 
+               grepl(comparison, pattern = "Female") ~ "female", 
+             ), 
+             APOE = case_when(
+               grepl(comparison, pattern = "4v3") ~ "APOE4 v APOE3", 
+               grepl(comparison, pattern = "2v3") ~ "APOE2 v APOE3", 
+             )) %>% 
              column_to_rownames("comparison"), 
-           annotation_col = toptables_cqn %>% 
+           annotation_row = toptables_cqn %>% 
              bind_rows() %>% 
-             dplyr::filter(gene_id %in% KEGG$KEGG_RIBOSOME) %>% 
+             dplyr::filter(gene_id %in% KEGG$KEGG_MTOR_SIGNALING_PATHWAY) %>% 
              dplyr::select(gene_name, DE, coef) %>% 
              mutate(coef = str_replace(coef, pattern = "2", replacement = "APOE2"), 
                     coef = str_replace(coef, pattern = "3", replacement = "APOE3"), 
@@ -1144,30 +1368,27 @@ toptables_cqn %>%
              ) %>% 
              spread(key = "coef", value = "DE") %>% 
              column_to_rownames("gene_name"),
-           annotation_colors = list("Male APOE4 v APOE3" = c("FALSE" = "grey60", 
-                                                        "TRUE" = "green2"), 
-                                    "Male APOE2 v APOE3" = c("FALSE" = "grey60", 
-                                                        "TRUE" = "green2"), 
-                                    "Female APOE4 v APOE3" = c("FALSE" = "grey60", 
-                                                        "TRUE" = "green2"), 
-                                    "Female APOE2 v APOE3" = c("FALSE" = "grey60", 
-                                                        "TRUE" = "green2"), 
-                                    APOE = c( "APOE2 v APOE3" = "purple", 
-                                              "APOE4 v APOE3" = "orange"), 
+           annotation_colors = list("Male APOE4 v APOE3" = c("FALSE" = "#43373F", 
+                                                             "TRUE" = "#99E1D9"), 
+                                    "Male APOE2 v APOE3" = c("FALSE" = "#43373F", 
+                                                             "TRUE" = "#99E1D9"), 
+                                    "Female APOE4 v APOE3" = c("FALSE" = "#43373F", 
+                                                               "TRUE" = "#99E1D9"), 
+                                    "Female APOE2 v APOE3" = c("FALSE" = "#43373F", 
+                                                               "TRUE" = "#99E1D9"), 
+                                    APOE = c( "APOE2 v APOE3" = "#E3D3B5", 
+                                              "APOE4 v APOE3" = "#2E294E"), 
                                     Sex = c(male = "black", 
                                             female = "grey50")
                                     ),
-           cellheight = 15, 
-           legend_breaks = c(seq(-.2, 0.2, by = 0.1), max(.)),
-           legend_labels = c(seq(-.2, 0.2, by = 0.1), "logFC"),
+           # legend_breaks = c(seq(-.4, 0.4, by = 0.1), 1),
+           # legend_labels = c(seq(-.4, 0.4, by = 0.1), "logFC"),
            border_color = NA, 
-           main = "KEGG_RIBOSOME", 
-           fontsize_col= 5
+           main = "KEGG_MTOR_SIGNALING_PATHWAY", 
+           fontsize_col= 12
            
   )
-#dev.off()
-  
-  
+dev.off()
 ```
 
 
@@ -1537,6 +1758,239 @@ labels = "AUTO"
   # ggsave("plotsforpub/celltype.png")
 ```
 
+### heatmaps for pub
+```{r}
+anno_celltype_males <- x_zhaoetal$samples %>% 
+  dplyr::filter(Sex == "male") %>% 
+  dplyr::select(Genotype)
+
+anno_celltype_females <- x_zhaoetal$samples %>% 
+  dplyr::filter(Sex == "female") %>% 
+  dplyr::select(Genotype)
+
+png("output/apoe/microglia_apoe males.png", width = 25, height = 10, units = "cm", res = 800)  
+logCPM_zhaeoetal %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene_id") %>% 
+  dplyr::filter(gene_id %in% cell_type_markers$Microglia) %>% 
+  dplyr::select(gene_id, x_zhaoetal$samples %>% 
+                  dplyr::select(sample, Genotype, Sex) %>% 
+                  dplyr::filter(Sex == "male") %>% 
+                  .$sample
+                  ) %>% 
+column_to_rownames("gene_id") %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = anno_celltype_males,
+           annotation_colors = list(Genotype = c(APOE3 = "#ff6666",
+                                                 APOE2 = "#CCFF66",
+                                                 APOE4 = "#5D2E8C")
+           ),
+           kmeans_k = 5,
+           # cluster_rows = F, cluster_cols = F,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Microglia males\n" )
+dev.off()
+
+png("output/apoe/microglia_apoe females.png", width = 25, height = 10, units = "cm", res = 800)  
+logCPM_zhaeoetal %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene_id") %>% 
+  dplyr::filter(gene_id %in% cell_type_markers$Microglia) %>% 
+  dplyr::select(gene_id, x_zhaoetal$samples %>% 
+                  dplyr::select(sample, Genotype, Sex) %>% 
+                  dplyr::filter(Sex == "female") %>% 
+                  .$sample
+  ) %>% 
+  column_to_rownames("gene_id") %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = anno_celltype_females,
+           annotation_colors = list(Genotype = c(APOE3 = "#ff6666",
+                                                 APOE2 = "#CCFF66",
+                                                 APOE4 = "#5D2E8C")
+           ),
+           kmeans_k = 5,
+           # cluster_rows = F, cluster_cols = F,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Microglia females\n" )
+dev.off()
+
+png("output/apoe/Astrocytes_apoe females.png", width = 25, height = 10, units = "cm", res = 800)  
+logCPM_zhaeoetal %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene_id") %>% 
+  dplyr::filter(gene_id %in% cell_type_markers$Astrocytes) %>% 
+  dplyr::select(gene_id, x_zhaoetal$samples %>% 
+                  dplyr::select(sample, Genotype, Sex) %>% 
+                  dplyr::filter(Sex == "female") %>% 
+                  .$sample
+  ) %>% 
+  column_to_rownames("gene_id") %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = anno_celltype_females,
+           annotation_colors = list(Genotype = c(APOE3 = "#ff6666",
+                                                 APOE2 = "#CCFF66",
+                                                 APOE4 = "#5D2E8C")
+           ),
+           kmeans_k = 5,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Astrocytes females\n" )
+dev.off()
+
+
+png("output/apoe/Astrocytes_apoe mmales.png", width = 25, height = 10, units = "cm", res = 800)  
+logCPM_zhaeoetal %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene_id") %>% 
+  dplyr::filter(gene_id %in% cell_type_markers$Astrocytes) %>% 
+  dplyr::select(gene_id, x_zhaoetal$samples %>% 
+                  dplyr::select(sample, Genotype, Sex) %>% 
+                  dplyr::filter(Sex == "male") %>% 
+                  .$sample
+  ) %>% 
+  column_to_rownames("gene_id") %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = anno_celltype_males,
+           annotation_colors = list(Genotype = c(APOE3 = "#ff6666",
+                                                 APOE2 = "#CCFF66",
+                                                 APOE4 = "#5D2E8C")
+           ),
+           kmeans_k = 5,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Astrocytes males\n" )
+dev.off()
+
+png("output/apoe/neurons_apoe females.png", width = 25, height = 10, units = "cm", res = 800)  
+logCPM_zhaeoetal %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene_id") %>% 
+  dplyr::filter(gene_id %in% cell_type_markers$Neurons) %>% 
+  dplyr::select(gene_id, x_zhaoetal$samples %>% 
+                  dplyr::select(sample, Genotype, Sex) %>% 
+                  dplyr::filter(Sex == "female") %>% 
+                  .$sample
+  ) %>% 
+  column_to_rownames("gene_id") %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = anno_celltype_females,
+           annotation_colors = list(Genotype = c(APOE3 = "#ff6666",
+                                                 APOE2 = "#CCFF66",
+                                                 APOE4 = "#5D2E8C")
+           ),
+           kmeans_k = 5,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Neurons females\n" )
+dev.off()
+
+
+png("output/apoe/neurons_apoe mmales.png", width = 25, height = 10, units = "cm", res = 800)  
+logCPM_zhaeoetal %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene_id") %>% 
+  dplyr::filter(gene_id %in% cell_type_markers$Neurons) %>% 
+  dplyr::select(gene_id, x_zhaoetal$samples %>% 
+                  dplyr::select(sample, Genotype, Sex) %>% 
+                  dplyr::filter(Sex == "male") %>% 
+                  .$sample
+  ) %>% 
+  column_to_rownames("gene_id") %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = anno_celltype_males,
+           annotation_colors = list(Genotype = c(APOE3 = "#ff6666",
+                                                 APOE2 = "#CCFF66",
+                                                 APOE4 = "#5D2E8C")
+           ),
+           kmeans_k = 5,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Neurons males\n" )
+dev.off()
+
+png("output/apoe/neurons_apoe females.png", width = 25, height = 10, units = "cm", res = 800)  
+logCPM_zhaeoetal %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene_id") %>% 
+  dplyr::filter(gene_id %in% cell_type_markers$Neurons) %>% 
+  dplyr::select(gene_id, x_zhaoetal$samples %>% 
+                  dplyr::select(sample, Genotype, Sex) %>% 
+                  dplyr::filter(Sex == "female") %>% 
+                  .$sample
+  ) %>% 
+  column_to_rownames("gene_id") %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = anno_celltype_females,
+           annotation_colors = list(Genotype = c(APOE3 = "#ff6666",
+                                                 APOE2 = "#CCFF66",
+                                                 APOE4 = "#5D2E8C")
+           ),
+           kmeans_k = 5,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Neurons females\n" )
+dev.off()
+
+
+png("output/apoe/Oligodendrocytes_apoe mmales.png", width = 25, height = 10, units = "cm", res = 800)  
+logCPM_zhaeoetal %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene_id") %>% 
+  dplyr::filter(gene_id %in% cell_type_markers$Oligodendrocytes) %>% 
+  dplyr::select(gene_id, x_zhaoetal$samples %>% 
+                  dplyr::select(sample, Genotype, Sex) %>% 
+                  dplyr::filter(Sex == "male") %>% 
+                  .$sample
+  ) %>% 
+  column_to_rownames("gene_id") %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = anno_celltype_males,
+           annotation_colors = list(Genotype = c(APOE3 = "#ff6666",
+                                                 APOE2 = "#CCFF66",
+                                                 APOE4 = "#5D2E8C")
+           ),
+           kmeans_k = 5,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Oligodendrocytes males\n" )
+dev.off()
+
+png("output/apoe/Oligodendrocytes_apoe females.png", width = 25, height = 10, units = "cm", res = 800)  
+logCPM_zhaeoetal %>% 
+  as.data.frame() %>% 
+  rownames_to_column("gene_id") %>% 
+  dplyr::filter(gene_id %in% cell_type_markers$Oligodendrocytes) %>% 
+  dplyr::select(gene_id, x_zhaoetal$samples %>% 
+                  dplyr::select(sample, Genotype, Sex) %>% 
+                  dplyr::filter(Sex == "female") %>% 
+                  .$sample
+  ) %>% 
+  column_to_rownames("gene_id") %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = anno_celltype_females,
+           annotation_colors = list(Genotype = c(APOE3 = "#ff6666",
+                                                 APOE2 = "#CCFF66",
+                                                 APOE4 = "#5D2E8C")
+           ),
+           kmeans_k = 5,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Oligodendrocytes females\n" )
+dev.off()
+```
+
+
 <!-- ## data export -->
 <!-- ```{r} -->
 <!-- saveRDS(x_zhaoetal, "R_objects/apoe_zhaoetal_dge.rds") -->
@@ -1544,8 +1998,203 @@ labels = "AUTO"
 <!-- saveRDS(HMP, "R_objects/apoe_zhaoetal_HMP.rds") -->
 <!-- ``` -->
 
+
+# Compare with Q96
+```{r}
+
+read_tsv("data/zf2mouse.txt") %>% 
+  as_tibble %>% 
+  set_colnames(c("ensembl", "NA", "mm.gene.name", "zf.gene.name")) %>% 
+  dplyr::select(-"NA") %>% 
+  left_join(read_csv("data/zebrafish/R_objects/Normoxia_Q96mutant_vs_wt_limma (1).csv")) %>% 
+  dplyr::filter(mm.gene.name %in% rownames(oxphos_anno_row)) %>% 
+  dplyr::select(mm.gene.name, logFC.Q96 = logFC) %>% 
+  left_join(toptables_cqn$`Female 4v3` %>% 
+              dplyr::select(mm.gene.name = "gene_name", logFC.APOE4.male = logFC)) %>% 
+  ggplot(aes(logFC.APOE4.male, logFC.Q96)) +
+  geom_point() +
+  stat_cor()
+
+
+read_tsv("data/zf2mouse.txt") %>% 
+  as_tibble %>% 
+  set_colnames(c("ensembl", "NA", "mm.gene.name", "symbol")) %>% 
+  dplyr::select(-"NA") %>% 
+  
+  left_join(readRDS("data/zebrafish/R_objects/sorl1_4way_toptable.rds") %>% .$trans) %>% 
+  dplyr::filter(mm.gene.name %in% rownames(oxphos_anno_row)) %>% 
+  dplyr::select(mm.gene.name, logFC.Q96 = logFC) %>% 
+  left_join(toptables_cqn$`Female 4v3` %>% 
+              dplyr::select(mm.gene.name = "gene_name", logFC.APOE4.male = logFC)) %>% 
+  ggplot(aes(logFC.APOE4.male, logFC.Q96)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  stat_cor() 
+
+
+read_tsv("data/zf2mouse.txt") %>% 
+  as_tibble %>% 
+  set_colnames(c("ensembl", "NA", "mm.gene.name", "symbol")) %>% 
+  dplyr::select(-"NA") %>% 
+  
+  left_join(readRDS("data/zebrafish/R_objects/sorl1_4way_toptable.rds") %>% .$trans) %>% 
+  dplyr::filter(mm.gene.name %in% rownames(oxphos_anno_row)) %>% 
+  dplyr::select(mm.gene.name, logFC.Q96 = logFC) %>% 
+  left_join(toptables_cqn$`Female 4v3` %>% 
+              dplyr::select(mm.gene.name = "gene_name", logFC.APOE4.male = logFC)) %>% 
+  ggplot(aes(logFC.APOE4.male, logFC.Q96)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  stat_cor() 
+
+```
+
 # Session info
 ```{r}
 sessionInfo() %>% pander()
+```
+
+```{r}
+DEG_male_apoe4 <- toptables_cqn$`Male 4v3` %>% dplyr::filter(DE == TRUE) %>% .$gene_name
+
+toptables_cqn %>% 
+  bind_rows() %>% 
+  dplyr::filter(gene_id %in% ireGenes$`All 3' IREs`) %>%
+  dplyr::filter(gene_name %in% DEG_male_apoe4) %>%
+  dplyr::select(gene_name, coef, logFC) %>% 
+  spread(key = "coef", value = logFC) %>% 
+  column_to_rownames("gene_name") %>% 
+  pheatmap(cluster_cols = T,
+           color = colorRampPalette(rev(brewer.pal(n = 7, name =
+                                                     "RdBu")))(100), 
+           breaks = c(seq(min(.), 0, length.out=ceiling(100/2) + 1), 
+                      seq(max(.)/100, max(.), length.out=floor(100/2))),
+           annotation_col = tibble(comparison = colnames(.)) %>%
+             mutate(Sex = case_when(
+               grepl(comparison, pattern = "Male") ~ "male",
+               grepl(comparison, pattern = "Female") ~ "female",
+             ),
+             APOE = case_when(
+               grepl(comparison, pattern = "4v3") ~ "APOE4 v APOE3",
+               grepl(comparison, pattern = "2v3") ~ "APOE2 v APOE3",
+             )) %>%
+             column_to_rownames("comparison"),
+           annotation_colors = list("Male APOE4 v APOE3" = c("FALSE" = "#43373F", 
+                                                             "TRUE" = "#99E1D9"), 
+                                    "Male APOE2 v APOE3" = c("FALSE" = "#43373F", 
+                                                             "TRUE" = "#99E1D9"), 
+                                    "Female APOE4 v APOE3" = c("FALSE" = "#43373F", 
+                                                               "TRUE" = "#99E1D9"), 
+                                    "Female APOE2 v APOE3" = c("FALSE" = "#43373F", 
+                                                               "TRUE" = "#99E1D9"), 
+                                    APOE = c( "APOE2 v APOE3" = "#E3D3B5", 
+                                              "APOE4 v APOE3" = "#2E294E"), 
+                                    Sex = c(male = "black", 
+                                            female = "grey50")
+           ),
+           show_colnames = TRUE,
+           show_rownames = T, 
+           kmeans_k = 20,
+           angle_col = 315,
+           border_color = NA, 
+           main = "All 3' IRE genes which are DE in male APOE4 mice"
+           
+  )
+
+toptables_cqn %>% 
+  bind_rows() %>% 
+  dplyr::filter(gene_id %in% ireGenes$`All 3' IREs`) %>%
+  dplyr::filter(gene_name %in% DEG_male_apoe4) %>%
+  dplyr::filter(abs(logFC) < 1 ) %>% 
+  dplyr::select(gene_name, coef, logFC) %>% 
+  spread(key = "coef", value = logFC) %>% 
+  column_to_rownames("gene_name") %>% 
+  na.omit %>% 
+  pheatmap(cluster_cols = T,
+           color = colorRampPalette(rev(brewer.pal(n = 7, name =
+                                                     "RdBu")))(100), 
+           breaks = c(seq(min(.), 0, length.out=ceiling(100/2) + 1), 
+                      seq(max(.)/100, max(.), length.out=floor(100/2))),
+           annotation_col = tibble(comparison = colnames(.)) %>%
+             mutate(Sex = case_when(
+               grepl(comparison, pattern = "Male") ~ "male",
+               grepl(comparison, pattern = "Female") ~ "female",
+             ),
+             APOE = case_when(
+               grepl(comparison, pattern = "4v3") ~ "APOE4 v APOE3",
+               grepl(comparison, pattern = "2v3") ~ "APOE2 v APOE3",
+             )) %>%
+             column_to_rownames("comparison"),
+           annotation_colors = list("Male APOE4 v APOE3" = c("FALSE" = "#43373F", 
+                                                             "TRUE" = "#99E1D9"), 
+                                    "Male APOE2 v APOE3" = c("FALSE" = "#43373F", 
+                                                             "TRUE" = "#99E1D9"), 
+                                    "Female APOE4 v APOE3" = c("FALSE" = "#43373F", 
+                                                               "TRUE" = "#99E1D9"), 
+                                    "Female APOE2 v APOE3" = c("FALSE" = "#43373F", 
+                                                               "TRUE" = "#99E1D9"), 
+                                    APOE = c( "APOE2 v APOE3" = "#E3D3B5", 
+                                              "APOE4 v APOE3" = "#2E294E"), 
+                                    Sex = c(male = "black", 
+                                            female = "grey50")
+           ),
+           show_colnames = TRUE,
+           show_rownames = T,
+           # kmeans_k = 20,
+           angle_col = 315,
+           border_color = NA, 
+           main = "3' IRE genes which are DE in male APOE4 mice with logFC less than 1"
+  )
+     
+toptables_cqn$`Male 4v3` %>% 
+  dplyr::filter(gene_id %in% ireGenes$`All 3' IREs`) %>%
+    mutate(rankstat = sign(logFC)*-log10(PValue)) %>% 
+    ggplot(aes(x = len, y = rankstat)) +
+    geom_point(alpha = 0.5, 
+               aes(colour = DE)) +
+    coord_cartesian(ylim = c(-20, 20)) +
+    scale_x_log10() +
+    facet_wrap(~ coef, scales = "free") +
+    scale_color_manual(values = c("grey50", "red")) +
+    theme_bw() + 
+    labs(x = "Average transcript length per gene ", 
+         y = "sign(logFC)*-log10(PValue)", 
+         colour = "Differentially expxressed?") +
+    geom_smooth(se = F)
+
+toptables_cqn$`Male 4v3` %>% 
+  dplyr::filter(gene_id %in% ireGenes$`All 3' IREs`) %>%
+    mutate(rankstat = sign(logFC)*-log10(PValue)) %>% 
+    ggplot(aes(x = len, y = rankstat)) +
+    geom_point(alpha = 0.5, 
+               aes(colour = DE)) +
+    scale_x_log10() +
+  # coord_cartesian(ylim = c(-5,5)) +
+    facet_wrap(~ coef, scales = "free") +
+    scale_color_manual(values = c("grey50", "red")) +
+    theme_bw() + 
+    labs(x = "Average transcript length per gene ", 
+         y = "sign(logFC)*-log10(PValue)", 
+         colour = "Differentially expxressed?") +
+    geom_smooth(se = T)
+
+toptables_cqn$`Male 4v3` %>%
+  dplyr::filter(gene_id %in% KEGG$KEGG_OXIDATIVE_PHOSPHORYLATION) %>%
+    mutate(rankstat = sign(logFC)*-log10(PValue)) %>% 
+    ggplot(aes(x = meanGC, y = rankstat)) +
+    geom_point(alpha = 0.5, 
+               aes(colour = DE)) +
+    scale_x_log10() +
+  # coord_cartesian(ylim = c(-5,5)) +
+    facet_wrap(~ coef, scales = "free") +
+    scale_color_manual(values = c("grey50", "red")) +
+    theme_bw() + 
+    labs(x = "Average transcript length per gene ", 
+         y = "sign(logFC)*-log10(PValue)", 
+         colour = "Differentially expxressed?") +
+    geom_smooth(se = T)
+
+HMP %>% 
+  dplyr::filter(grepl(geneset, pattern = "IRE"))
 ```
 

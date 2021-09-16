@@ -22,6 +22,10 @@ library(RColorBrewer)
 library(tidyverse)
 library(magrittr)
 library(pheatmap)
+library(readxl)
+library(biomaRt)
+library(edgeR)
+library(factoextra) 
 ```
 
 # annotations
@@ -171,6 +175,9 @@ HMP_all %>%
   )
 #dev.off()
 
+# write out as csv for S2 file
+# HMP_all %>% write_csv2("output/harmonicmeanpvals.csv")
+
 ```
 
 # Heatmap of oxphos
@@ -263,8 +270,39 @@ oxphos_anno_colours <- brewer.pal(name = "Set1", n = 5)
 names(oxphos_anno_colours) <- names(oxphos_anno_list) 
 oxphos_anno_colours <- list(complex = oxphos_anno_colours)
 
-# png("output/oxphos.png", width = 18, height = 20, units = "cm", res = 1000)  
-logFCs %>%   
+# png("output/oxphos_.png", width = 80, height = 20, units = "cm", res = 800)  
+# logFCs %>%   
+#   dplyr::filter(gene_id %in% KEGG$KEGG_OXIDATIVE_PHOSPHORYLATION) %>% 
+#   left_join(genes %>% as_tibble()) %>% 
+#   dplyr::distinct(gene_name, mutation, .keep_all = TRUE) %>% 
+#   dplyr::select(gene_name, logFC, mutation) %>% 
+#   spread(key = "mutation", value = "logFC") %>% 
+#   na.omit %>% 
+#   column_to_rownames("gene_name") %>% 
+#   .[c(oxphos_anno_list$`Complex I`, 
+#       oxphos_anno_list$`Complex II`,
+#       oxphos_anno_list$`Complex III`,
+#       oxphos_anno_list$`Complex IV`,
+#       oxphos_anno_list$`Complex V`
+#       ), ] %>% 
+#   na.omit() %>% #.[c(oxphos_anno_list$`Complex I`, oxphos_anno_list$`Complex II`, oxphos_anno_list$`Complex III`),] %>% dim
+#   t() %>% 
+#   pheatmap(color = colorRampPalette(rev(brewer.pal(n = 11, 
+#                                                    name = "RdBu")))(100), 
+#            cellwidth = 10,
+#            cellheight = 40,
+#            cluster_cols = FALSE,
+#            show_colnames = FALSE,
+#            fontsize_row = 25,
+#            angle_col = 315, 
+#            annotation_col = oxphos_anno,
+#            annotation_colors = oxphos_anno_colours,
+#            gaps_col = c(40, 44, 52, 71),
+#            breaks =  seq(-0.5, 0.5, length.out = 100),
+#            main = "KEGG_OXIDATIVE_PHOSPHORYLATION")
+#  dev.off()  
+# png("output/oxphos_wcolnames.png", width = 95, height = 20, units = "cm", res = 400) 
+ logFCs %>%   
   dplyr::filter(gene_id %in% KEGG$KEGG_OXIDATIVE_PHOSPHORYLATION) %>% 
   left_join(genes %>% as_tibble()) %>% 
   dplyr::distinct(gene_name, mutation, .keep_all = TRUE) %>% 
@@ -279,21 +317,22 @@ logFCs %>%
       oxphos_anno_list$`Complex V`
       ), ] %>% 
   na.omit() %>% #.[c(oxphos_anno_list$`Complex I`, oxphos_anno_list$`Complex II`, oxphos_anno_list$`Complex III`),] %>% dim
+  t() %>% 
   pheatmap(color = colorRampPalette(rev(brewer.pal(n = 11, 
-                                                    name = "RdBu")))(100), 
-           height = 10,
-           cellwidth = 20,
-           # cellheight = 7,
-           cluster_rows = FALSE,
-           angle_col = 315,
-           border_color = "black",
-           annotation_row = oxphos_anno,
+                                                   name = "RdBu")))(100), 
+           cellwidth = 18,
+           cellheight = 40,
+           cluster_cols = FALSE,
+           show_colnames = T,
+           fontsize_col = 15,
+           fontsize_row = 25,
+           angle_col = 315, 
+           annotation_col = oxphos_anno,
            annotation_colors = oxphos_anno_colours,
-           gaps_row = c(40, 44, 52, 71),
-           show_rownames = FALSE,
+           gaps_col = c(40, 44, 52, 71),
            breaks =  seq(-0.5, 0.5, length.out = 100),
            main = "KEGG_OXIDATIVE_PHOSPHORYLATION")
-# dev.off()  
+ # dev.off()
 ```
 
 # Heatmap of ribosome gene expression
@@ -338,7 +377,7 @@ ribo_anno <-
   dplyr::select(-description) %>% 
   column_to_rownames("gene_name")
 
-png("output/ribo.png", width = 18, height = 20, units = "cm", res = 1000)  
+png("output/ribo_wcolnames.png", width = 78, height = 20, units = "cm", res = 400)  
 logFCs %>%   
   dplyr::filter(gene_id %in% KEGG$KEGG_RIBOSOME) %>% 
   left_join(genes %>% as_tibble()) %>% 
@@ -348,20 +387,272 @@ logFCs %>%
   column_to_rownames("gene_name") %>% 
   .[c(ribo_anno_list$`Large subunit`, ribo_anno_list$`Small subunit`),] %>% 
   na.omit %>% 
+  t() %>% 
   pheatmap(color = colorRampPalette(rev(brewer.pal(n = 11, 
-                                                    name = "RdBu")))(100), 
-           height = 10,
+                                                   name = "RdBu")))(100), 
            cellwidth = 20,
-           cluster_rows = FALSE,
-           annotation_row = ribo_anno,
-           angle_col = 315,
-           gaps_row = 47,
-           border_color = NA,
-           show_rownames = FALSE,
+           cellheight = 40,
+           fontsize_col = 18,
+           cluster_cols = FALSE,
+           show_colnames = T,
+           fontsize_row = 25,
+           angle_col = 315, 
+           annotation_col = ribo_anno,
+           gaps_col = 47,
            breaks =  seq(-0.5, 0.5, length.out = 100),
            main = "KEGG_RIBOSOME")
 dev.off()
 ```
+
+# cell type proportions
+
+```{r}
+sorl1_dge_RUV <- readRDS("data/zebrafish/R_objects/sorl1_dge_RUV.rds")
+
+#biomart to get the conversion between mouse and zebrafish IDs
+mart <- useMart("ensembl", "drerio_gene_ensembl")
+getFromBiomart <- c("ensembl_gene_id", "mmusculus_homolog_associated_gene_name")
+zf_id_2_mm_genename <- getBM(attributes = getFromBiomart,
+                             mart = mart) %>% 
+  as_tibble() %>% 
+  set_colnames(c("gene_id", "mouse_gene_name"))
+
+cell_type_markers <- 
+  read_xls("data/cell_type_genes41586_2007_BFnature05453_MOESM11_ESM.xls") %>%
+  as_tibble() %>%
+  dplyr::select(c("Neuron-enriched", "Astrocyte-enriched", "Oligodendrocyte-enriched")) %>%
+  gather(key = "cell_type", value = "mouse_gene_name") %>% 
+  left_join(zf_id_2_mm_genename) %>% 
+  na.omit %>% 
+  split(f = .$cell_type) %>% 
+  lapply(extract2, "gene_id")
+
+cell_type_markers$`Microglia-enriched` <- 
+  read_excel("data/microglia_oosterofetal.xlsx", sheet = 1) %>%
+  rbind(read_excel("data/microglia_oosterofetal.xlsx", sheet = 2)) %>%
+  rbind(read_excel("data/microglia_oosterofetal.xlsx", sheet = 3)) %>%
+  .$Zebrafish.Ensembl.Gene.ID %>% 
+  unique
+
+# work out optimum number of clusters for kmeans 
+# sorl1_dge_RUV %>% 
+#   cpm(log=TRUE) %>%
+#   as.data.frame() %>%
+#   .[cell_type_markers$`Microglia-enriched`,] %>%
+#   na.omit %>% 
+#   fviz_nbclust(kmeans, method = "wss") 
+
+annoForCelltypesSORL1 <- sorl1_dge_RUV$samples %>% 
+  dplyr::select(new_sample_id, Genotype) %>% 
+  column_to_rownames("new_sample_id")
+
+png("output/zebrafish cell type proportions/microglia_sorl1_4way.png", width = 25, height = 10, units = "cm", res = 800)  
+sorl1_dge_RUV %>%
+  cpm(log=TRUE) %>%
+  as.data.frame() %>% 
+  rownames_to_column("gene_id") %>% 
+  gather(key = "sample", value = "logCPM", sorl1_dge_RUV$samples$sample) %>% 
+  left_join(sorl1_dge_RUV$samples) %>% 
+  as_tibble() %>% 
+  dplyr::select(gene_id, new_sample_id, logCPM) %>% 
+  spread(key = "new_sample_id", value = "logCPM") %>% 
+  column_to_rownames("gene_id") %>% 
+  .[cell_type_markers$`Microglia-enriched`,] %>% 
+  na.omit %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = annoForCelltypesSORL1,
+           annotation_colors = list(Genotype = c(WT = "#ff6666", 
+                                                 trans = "#CCFF66",
+                                                 `R122Pfs/+` = "#5D2E8C", 
+                                                 `V1482Afs/+` = "#2EC4B6" )),
+           kmeans_k = 5,
+           # cluster_rows = F, cluster_cols = F,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Microglia" 
+  ) 
+dev.off()
+
+png("output/zebrafish cell type proportions/neurons_sorl14way.png", width = 25, height = 10, units = "cm", res = 800)  
+sorl1_dge_RUV %>% 
+  cpm(log=TRUE) %>%
+  as.data.frame() %>% 
+    rownames_to_column("gene_id") %>% 
+  gather(key = "sample", value = "logCPM", sorl1_dge_RUV$samples$sample) %>% 
+  left_join(sorl1_dge_RUV$samples) %>% 
+  as_tibble() %>% 
+  dplyr::select(gene_id, new_sample_id, logCPM) %>% 
+  spread(key = "new_sample_id", value = "logCPM") %>% 
+  column_to_rownames("gene_id") %>% 
+  .[cell_type_markers$`Neuron-enriched`,] %>% 
+  na.omit %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = annoForCelltypesSORL1,
+           annotation_colors = list(Genotype = c(WT = "#ff6666", 
+                                                 trans = "#CCFF66",
+                                                 `R122Pfs/+` = "#5D2E8C", 
+                                                 `V1482Afs/+` = "#2EC4B6" )),
+           kmeans_k = 5,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Neurons" 
+  ) 
+dev.off()
+
+png("output/zebrafish cell type proportions/Astrocyte_sorl14way.png", width = 25, height = 10, units = "cm", res = 800)  
+sorl1_dge_RUV %>% 
+  cpm(log=TRUE) %>%
+  as.data.frame() %>% 
+  rownames_to_column("gene_id") %>% 
+  gather(key = "sample", value = "logCPM", sorl1_dge_RUV$samples$sample) %>% 
+  left_join(sorl1_dge_RUV$samples) %>% 
+  as_tibble() %>% 
+  dplyr::select(gene_id, new_sample_id, logCPM) %>% 
+  spread(key = "new_sample_id", value = "logCPM") %>% 
+  column_to_rownames("gene_id") %>% 
+  .[cell_type_markers$`Astrocyte-enriched`,] %>% 
+  na.omit %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = annoForCelltypesSORL1,
+           annotation_colors = list(Genotype = c(WT = "#ff6666", 
+                                                 trans = "#CCFF66",
+                                                 `R122Pfs/+` = "#5D2E8C", 
+                                                 `V1482Afs/+` = "#2EC4B6" )),
+           kmeans_k = 5,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Astrocytes" 
+  ) 
+dev.off()
+
+png("output/zebrafish cell type proportions/Oligodendrocytes_sorl14way.png", width = 25, height = 10, units = "cm", res = 800)  
+sorl1_dge_RUV %>% 
+  cpm(log=TRUE) %>%
+  as.data.frame() %>% 
+    rownames_to_column("gene_id") %>% 
+  gather(key = "sample", value = "logCPM", sorl1_dge_RUV$samples$sample) %>% 
+  left_join(sorl1_dge_RUV$samples) %>% 
+  as_tibble() %>% 
+  dplyr::select(gene_id, new_sample_id, logCPM) %>% 
+  spread(key = "new_sample_id", value = "logCPM") %>% 
+  column_to_rownames("gene_id") %>% 
+  .[cell_type_markers$`Oligodendrocyte-enriched`,] %>% 
+  na.omit %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           annotation_col = annoForCelltypesSORL1,
+           annotation_colors = list(Genotype = c(WT = "#ff6666", 
+                                                 trans = "#CCFF66",
+                                                 `R122Pfs/+` = "#5D2E8C", 
+                                                 `V1482Afs/+` = "#2EC4B6" )),
+           kmeans_k = 5,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Oligodendrocytes" 
+  ) 
+dev.off()
+
+```
+
+## Q96K97del cell types
+
+Look at 6m and 24m
+
+```{r}
+# read in gene expression values for Q96_K97del
+Q96_dge <- readRDS("data/zebrafish/R_objects/dge_all.rds")
+
+Q96_anno <- Q96_dge$samples %>% 
+  as_tibble() %>% 
+  dplyr::select(sample, Age, Genotype, Hypoxia, Sex = Gender) %>% 
+  mutate(Hypoxia = case_when(Hypoxia == "0" ~ "Normoxia", 
+                             Hypoxia == "1" ~ "Hypoxia"), 
+         Genotype = case_when(Genotype == "wt" ~ "WT", 
+                              Genotype == "q96" ~ "Q96_K97del/+"), 
+         Age = paste0(Age, "m")) %>% 
+  column_to_rownames("sample")
+Q96_annoColours  <- list(Genotype = c(WT = "#FF6666", 
+                                      `Q96_K97del/+` = "#CCFF66"), 
+                         Age = c(`6m` = "#88498F", 
+                                 `24m` = "#779FA1"), 
+                         Sex = c(male = "#6A7FDB", 
+                                 female = "#57E2E5"), 
+                         Hypoxia = c(Normoxia = "#ACBEA3", 
+                                     Hypoxia = "#40476D")
+                         )
+
+png("output/zebrafish cell type proportions/q96 Oligodendrocytes.png", width = 25, height = 10, units = "cm", res = 800) 
+Q96_dge %>% 
+  cpm(log=TRUE) %>% 
+  as.data.frame() %>% 
+  .[cell_type_markers$`Oligodendrocyte-enriched`,] %>% 
+  na.omit() %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           kmeans_k = 5,
+           annotation_col = Q96_anno,
+           annotation_colors = Q96_annoColours,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Oligodendrocytes" 
+  ) 
+dev.off()
+
+png("output/zebrafish cell type proportions/q96 Neurons.png", width = 25, height = 10, units = "cm", res = 800) 
+Q96_dge %>% 
+  cpm(log=TRUE) %>% 
+  as.data.frame() %>% 
+  .[cell_type_markers$`Neuron-enriched`,] %>% 
+  na.omit() %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           kmeans_k = 5,
+           annotation_col = Q96_anno,
+           annotation_colors = Q96_annoColours,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Neurons" 
+  ) 
+dev.off()
+
+png("output/zebrafish cell type proportions/q96 Astrocytes.png", width = 25, height = 10, units = "cm", res = 800) 
+Q96_dge %>% 
+  cpm(log=TRUE) %>% 
+  as.data.frame() %>% 
+  .[cell_type_markers$`Astrocyte-enriched`,] %>% 
+  na.omit() %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           kmeans_k = 5,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           annotation_col = Q96_anno,
+           annotation_colors = Q96_annoColours,
+           main = "Astrocytes" 
+  )
+dev.off()
+
+png("output/zebrafish cell type proportions/q96 Microglia.png", width = 25, height = 10, units = "cm", res = 800) 
+Q96_dge %>% 
+  cpm(log=TRUE) %>% 
+  as.data.frame() %>% 
+  .[cell_type_markers$`Microglia-enriched`,] %>% 
+  na.omit() %>% 
+  pheatmap(color = viridis_pal(option = "magma", end = 0.9)(100), 
+           border_color = NA,
+           kmeans_k = 5,
+           annotation_col = Q96_anno,
+           annotation_colors = Q96_annoColours,
+           cellheight = 15, cellwidth = 15,
+           fontsize = 8, 
+           main = "Microglia" 
+  )
+dev.off()
+```
+
 
 
 
